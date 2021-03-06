@@ -18,4 +18,6 @@
     <param name="step_size" value="$(arg step_size)"/>
     <param name="max_iter" value="$(arg max_iter)"/>
   </node>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ndt_mapping)/config/ndt_mapping.rviz"/>
 </launch>
