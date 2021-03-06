@@ -45,6 +45,7 @@ NDTMapping::NDTMapping() : initial_scan_loaded_(true), is_first_map_(true)
   // create publisher
   ndt_map_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("ndt_map", 1000);
   current_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("current_pose", 1000);
+  transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
 }
 
 void NDTMapping::init(EulerPose &pose)
@@ -198,6 +199,11 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   sensor_msgs::PointCloud2 map_msg;
   pcl::toROSMsg(*map_ptr, map_msg);
   ndt_map_publisher_.publish(map_msg);
+
+  // マッチングの確率を出力
+  std_msgs::Float32 transform_probability;
+  transform_probability.data = ndt_.getTransformationProbability();
+  transform_probability_publisher_.publish(transform_probability);
 
   // 自己位置を出力
   quaternion.setRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw);

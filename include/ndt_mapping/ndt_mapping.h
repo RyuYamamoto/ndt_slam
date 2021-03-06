@@ -1,7 +1,8 @@
 #pragma 0
 
-#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <std_msgs/Float32.h>
+#include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 
@@ -43,6 +44,7 @@ private:
   ros::Subscriber imu_subscriber_;
   ros::Publisher ndt_map_publisher_;
   ros::Publisher current_pose_publisher_;
+  ros::Publisher transform_probability_publisher_;
 
   EulerPose offset_imu_odom_;
   // 点群地図を統合する際に移動量を計算するための初期位置用変数
