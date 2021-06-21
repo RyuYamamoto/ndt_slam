@@ -1,7 +1,7 @@
 #include "ndt_mapping/ndt_mapping.h"
 #include "ndt_mapping/ndt_mapping_utils.h"
 
-NDTMapping::NDTMapping() : initial_scan_loaded_(true), is_first_map_(true)
+NDTMapping::NDTMapping()
 {
   pnh_.param<double>("tf_x", tf_x_, 0.0);
   pnh_.param<double>("tf_y", tf_y_, 0.0);
@@ -35,7 +35,7 @@ NDTMapping::NDTMapping() : initial_scan_loaded_(true), is_first_map_(true)
 
   map_.header.frame_id = "map";
 
-  init(current_pose_);
+  init(ndt_pose_);
 
   // create subscriber
   points_subscriber_ = nh_.subscribe("points_raw", 10, &NDTMapping::pointsCallback, this);
@@ -44,11 +44,11 @@ NDTMapping::NDTMapping() : initial_scan_loaded_(true), is_first_map_(true)
 
   // create publisher
   ndt_map_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("ndt_map", 1000);
-  current_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("current_pose", 1000);
+  ndt_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("ndt_pose", 1000);
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
 }
 
-void NDTMapping::init(EulerPose &pose)
+void NDTMapping::init(Pose & pose)
 {
   pose.x = 0.0;
   pose.y = 0.0;
@@ -91,10 +91,10 @@ void NDTMapping::calcImuAndOdometry(const ros::Time time)
 
 void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points)
 {
-  pcl::PointCloud<pcl::PointXYZI> tmp;
-  pcl::PointCloud<pcl::PointXYZI>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZI>());
-  pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_scan_ptr(new pcl::PointCloud<pcl::PointXYZI>());
-  pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_scan_ptr(new pcl::PointCloud<pcl::PointXYZI>());
+  pcl::PointCloud<PointType> tmp;
+  pcl::PointCloud<PointType>::Ptr scan_ptr(new pcl::PointCloud<PointType>());
+  pcl::PointCloud<PointType>::Ptr filtered_scan_ptr(new pcl::PointCloud<PointType>());
+  pcl::PointCloud<PointType>::Ptr transformed_scan_ptr(new pcl::PointCloud<PointType>());
 
   current_scan_time_ = points->header.stamp;
   pcl::fromROSMsg(*points, tmp);
@@ -114,7 +114,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   }
 
   // 入力点群を間引く
-  pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter;
+  pcl::VoxelGrid<PointType> voxel_grid_filter;
   voxel_grid_filter.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
   voxel_grid_filter.setInputCloud(scan_ptr);
   voxel_grid_filter.filter(*filtered_scan_ptr);
@@ -122,7 +122,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   // NDT設定
   ndt_.setInputSource(filtered_scan_ptr);
 
-  pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>(map_));
+  pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
 
   // 初回マップ作成タイミング
   if (is_first_map_) {
@@ -141,7 +141,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   Eigen::Matrix4f init_guess =
     (init_translation * init_rotation_z * init_rotation_y * init_rotation_x).matrix() * tf_btol_;
 
-  pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+  pcl::PointCloud<PointType>::Ptr output_cloud(new pcl::PointCloud<PointType>);
 
   ndt_.align(*output_cloud, init_guess);
   const double fitness_score = ndt_.getFitnessScore();
@@ -166,21 +166,21 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
     static_cast<double>(t_base_link(2, 2)));
 
   // update ndt pose
-  current_pose_.x = t_base_link(0, 3);
-  current_pose_.y = t_base_link(1, 3);
-  current_pose_.z = t_base_link(2, 3);
-  mat_b.getRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw);
+  ndt_pose_.x = t_base_link(0, 3);
+  ndt_pose_.y = t_base_link(1, 3);
+  ndt_pose_.z = t_base_link(2, 3);
+  mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
   // base_link -> map
   // TODO implement tf2
-  transform_.setOrigin(tf::Vector3(current_pose_.x, current_pose_.y, current_pose_.z));
+  transform_.setOrigin(tf::Vector3(ndt_pose_.x, ndt_pose_.y, ndt_pose_.z));
   tf::Quaternion quaternion;
-  quaternion.setRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw);
+  quaternion.setRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
   transform_.setRotation(quaternion);
   br_.sendTransform(tf::StampedTransform(transform_, current_scan_time_, "map", "base_link"));
 
-  current_pose_imu_odom_ = current_pose_;
-  previous_pose_ = current_pose_;
+  current_pose_imu_odom_ = ndt_pose_;
+  previous_pose_ = ndt_pose_;
 
   previous_scan_time_ = current_scan_time_;
 
@@ -188,10 +188,12 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   init(offset_imu_odom_);
 
   // 指定距離移動してたら点群地図足し合わせ
-  const double shift = std::sqrt(std::pow(current_pose_.x - added_pose_.x, 2.0) + std::pow(current_pose_.y - added_pose_.y, 2.0));
-  if(min_add_scan_shift_ <= shift) {
+  const double shift = std::sqrt(
+    std::pow(ndt_pose_.x - added_pose_.x, 2.0) +
+    std::pow(ndt_pose_.y - added_pose_.y, 2.0));
+  if (min_add_scan_shift_ <= shift) {
     map_ += *transformed_scan_ptr;
-    added_pose_ = current_pose_;
+    added_pose_ = ndt_pose_;
     ndt_.setInputTarget(map_ptr);
   }
 
@@ -206,32 +208,35 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   transform_probability_publisher_.publish(transform_probability);
 
   // 自己位置を出力
-  quaternion.setRPY(current_pose_.roll, current_pose_.pitch, current_pose_.yaw);
-  geometry_msgs::PoseStamped current_pose_msg;
-  current_pose_msg.header.frame_id = "map";
-  current_pose_msg.header.stamp = current_scan_time_;
-  current_pose_msg.pose.position.x = current_pose_.x;
-  current_pose_msg.pose.position.y = current_pose_.y;
-  current_pose_msg.pose.position.z = current_pose_.z;
-  current_pose_msg.pose.orientation.x = quaternion.x();
-  current_pose_msg.pose.orientation.y = quaternion.y();
-  current_pose_msg.pose.orientation.z = quaternion.z();
-  current_pose_msg.pose.orientation.w = quaternion.w();
+  quaternion.setRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
+  geometry_msgs::PoseStamped ndt_pose_msg;
+  ndt_pose_msg.header.frame_id = "map";
+  ndt_pose_msg.header.stamp = current_scan_time_;
+  ndt_pose_msg.pose.position.x = ndt_pose_.x;
+  ndt_pose_msg.pose.position.y = ndt_pose_.y;
+  ndt_pose_msg.pose.position.z = ndt_pose_.z;
+  ndt_pose_msg.pose.orientation.x = quaternion.x();
+  ndt_pose_msg.pose.orientation.y = quaternion.y();
+  ndt_pose_msg.pose.orientation.z = quaternion.z();
+  ndt_pose_msg.pose.orientation.w = quaternion.w();
 
-  current_pose_publisher_.publish(current_pose_msg);
+  ndt_pose_publisher_.publish(ndt_pose_msg);
 
   std::cout << "-----------------------------------------------------------------" << std::endl;
   std::cout << "Sequence number: " << points->header.seq << std::endl;
   std::cout << "Number of scan points: " << scan_ptr->size() << " points." << std::endl;
-  std::cout << "Number of filtered scan points: " << filtered_scan_ptr->size() << " points." << std::endl;
-  std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
+  std::cout << "Number of filtered scan points: " << filtered_scan_ptr->size() << " points."
+            << std::endl;
+  std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points."
+            << std::endl;
   std::cout << "map: " << map_.points.size() << " points." << std::endl;
   std::cout << "NDT has converged: " << ndt_.hasConverged() << std::endl;
   std::cout << "Fitness score: " << fitness_score << std::endl;
   std::cout << "Number of iteration: " << ndt_.getFinalNumIteration() << std::endl;
   std::cout << "(x,y,z,roll,pitch,yaw):" << std::endl;
-  std::cout << "(" << current_pose_.x << ", " << current_pose_.y << ", " << current_pose_.z << ", " << current_pose_.roll
-            << ", " << current_pose_.pitch << ", " << current_pose_.yaw << ")" << std::endl;
+  std::cout << "(" << ndt_pose_.x << ", " << ndt_pose_.y << ", " << ndt_pose_.z << ", "
+            << ndt_pose_.roll << ", " << ndt_pose_.pitch << ", " << ndt_pose_.yaw << ")"
+            << std::endl;
   std::cout << "Transformation Matrix:" << std::endl;
   std::cout << t_localizer << std::endl;
   std::cout << "shift: " << shift << std::endl;

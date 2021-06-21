@@ -1,4 +1,5 @@
-#pragma 0
+#ifndef _NDT_MAPPING_UTILS_
+#define _NDT_MAPPING_UTILS_
 
 #include <iostream>
 #include <cmath>
@@ -14,3 +15,5 @@ double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
   return diff_rad;
 }
 }
+
+#endif
