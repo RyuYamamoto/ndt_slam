@@ -48,6 +48,7 @@ private:
   Pose previous_pose_;
   Pose current_pose_imu_odom_;
   Pose guess_pose_imu_odom_;
+  Pose diff_pose_;
 
   ros::Time current_scan_time_;
   ros::Time previous_scan_time_;

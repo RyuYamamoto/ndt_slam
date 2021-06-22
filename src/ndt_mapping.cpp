@@ -1,5 +1,4 @@
 #include "ndt_mapping/ndt_mapping.h"
-#include "ndt_mapping/ndt_mapping_utils.h"
 
 NDTMapping::NDTMapping()
 {
@@ -119,7 +118,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   voxel_grid_filter.setInputCloud(scan_ptr);
   voxel_grid_filter.filter(*filtered_scan_ptr);
 
-  // NDT設定
+  // 入力点群設定
   ndt_.setInputSource(filtered_scan_ptr);
 
   pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
