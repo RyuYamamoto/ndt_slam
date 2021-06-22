@@ -16,35 +16,37 @@ struct Pose
   : x(x), y(y), z(y), roll(roll), pitch(pitch), yaw(yaw)
   {
   }
-	Pose operator+(Pose input_pose)
-	{
-		Pose output_pose;
-		output_pose.x = this->x + input_pose.x;
-		output_pose.y = this->y + input_pose.y;
-		output_pose.z = this->z + input_pose.z;
-		output_pose.roll = this->roll + input_pose.roll;
-		output_pose.pitch = this->pitch + input_pose.pitch;
-		output_pose.yaw = this->yaw + input_pose.yaw;
-		return output_pose;
-	}
-	Pose operator-(Pose input_pose)
-	{
-		Pose output_pose;
-		output_pose.x = this->x - input_pose.x;
-		output_pose.y = this->y - input_pose.y;
-		output_pose.z = this->z - input_pose.z;
-		output_pose.roll = calcDiffForRadian(this->roll, input_pose.roll);
-		output_pose.pitch = calcDiffForRadian(this->pitch, input_pose.pitch);
-		output_pose.yaw = calcDiffForRadian(this->yaw, input_pose.yaw);
-		return output_pose;
-	}
-	double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
-	{
-		double diff_rad = lhs_rad - rhs_rad;
-		if(M_PI <= diff_rad) diff_rad = diff_rad - 2 * M_PI;
-		else if(diff_rad < -M_PI) diff_rad = diff_rad + 2 * M_PI;
-		return diff_rad;
-	}
+  Pose operator+(Pose input_pose)
+  {
+    Pose output_pose;
+    output_pose.x = this->x + input_pose.x;
+    output_pose.y = this->y + input_pose.y;
+    output_pose.z = this->z + input_pose.z;
+    output_pose.roll = this->roll + input_pose.roll;
+    output_pose.pitch = this->pitch + input_pose.pitch;
+    output_pose.yaw = this->yaw + input_pose.yaw;
+    return output_pose;
+  }
+  Pose operator-(Pose input_pose)
+  {
+    Pose output_pose;
+    output_pose.x = this->x - input_pose.x;
+    output_pose.y = this->y - input_pose.y;
+    output_pose.z = this->z - input_pose.z;
+    output_pose.roll = calcDiffForRadian(this->roll, input_pose.roll);
+    output_pose.pitch = calcDiffForRadian(this->pitch, input_pose.pitch);
+    output_pose.yaw = calcDiffForRadian(this->yaw, input_pose.yaw);
+    return output_pose;
+  }
+  double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
+  {
+    double diff_rad = lhs_rad - rhs_rad;
+    if (M_PI <= diff_rad)
+      diff_rad = diff_rad - 2 * M_PI;
+    else if (diff_rad < -M_PI)
+      diff_rad = diff_rad + 2 * M_PI;
+    return diff_rad;
+  }
 };
 
 #endif
