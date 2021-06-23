@@ -46,9 +46,9 @@ private:
   Pose ndt_pose_;
   // 一個前のスキャン時の自己位置
   Pose previous_pose_;
+
   Pose current_pose_imu_odom_;
-  Pose guess_pose_imu_odom_;
-  Pose diff_pose_;
+  Pose guess_pose_imu_odom_;;
 
   ros::Time current_scan_time_;
   ros::Time previous_scan_time_;
@@ -87,6 +87,8 @@ private:
   double tf_pitch_;
   double tf_yaw_;
   Eigen::Matrix4f tf_btol_, tf_ltob_;  // base_link to sensor_link
+
+  pcl::VoxelGrid<PointType> voxel_grid_filter_;
 
   void init(Pose & pose);
   void calcImuAndOdometry(const ros::Time time);

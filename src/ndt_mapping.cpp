@@ -1,4 +1,5 @@
-#include "ndt_mapping/ndt_mapping.h"
+#include <ndt_mapping/ndt_mapping.h>
+#include <ndt_mapping/ndt_mapping_utils.h>
 
 NDTMapping::NDTMapping()
 {
@@ -35,9 +36,12 @@ NDTMapping::NDTMapping()
   map_.header.frame_id = "map";
 
   init(ndt_pose_);
+  init(added_pose_);
+
+  voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
 
   // create subscriber
-  points_subscriber_ = nh_.subscribe("points_raw", 10, &NDTMapping::pointsCallback, this);
+  points_subscriber_ = nh_.subscribe("points_raw", 1, &NDTMapping::pointsCallback, this);
   odom_subscriber_ = nh_.subscribe("odom", 10, &NDTMapping::odomCallback, this);
   imu_subscriber_ = nh_.subscribe("imu", 10, &NDTMapping::imuCallback, this);
 
@@ -101,22 +105,21 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   // スキャンした点群をminとmaxの距離でカットする
   for (const auto p : tmp.points) {
     const double dist = std::sqrt(p.x * p.x + p.y * p.y);
-    if (min_scan_range_ < dist && dist < max_scan_range_) scan_ptr->push_back(p);
+    if (min_scan_range_ < dist && dist < max_scan_range_) {
+      scan_ptr->push_back(p);
+    }
   }
 
   // 初回スキャン時
   if (initial_scan_loaded_) {
     pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, tf_btol_);
     map_ += *transformed_scan_ptr;
-    std::cout << map_.points.size() << std::endl;
     initial_scan_loaded_ = false;
   }
 
   // 入力点群を間引く
-  pcl::VoxelGrid<PointType> voxel_grid_filter;
-  voxel_grid_filter.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
-  voxel_grid_filter.setInputCloud(scan_ptr);
-  voxel_grid_filter.filter(*filtered_scan_ptr);
+  voxel_grid_filter_.setInputCloud(scan_ptr);
+  voxel_grid_filter_.filter(*filtered_scan_ptr);
 
   // 入力点群設定
   ndt_.setInputSource(filtered_scan_ptr);
@@ -129,19 +132,15 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
     is_first_map_ = false;
   }
 
-  // imuとodometryから移動差分を計算する
-  calcImuAndOdometry(current_scan_time_);
-
-  Eigen::AngleAxisf init_rotation_x(guess_pose_imu_odom_.roll, Eigen::Vector3f::UnitX());
-  Eigen::AngleAxisf init_rotation_y(guess_pose_imu_odom_.pitch, Eigen::Vector3f::UnitY());
-  Eigen::AngleAxisf init_rotation_z(guess_pose_imu_odom_.yaw, Eigen::Vector3f::UnitZ());
+  Eigen::AngleAxisf init_rotation_x(ndt_pose_.roll, Eigen::Vector3f::UnitX());
+  Eigen::AngleAxisf init_rotation_y(ndt_pose_.pitch, Eigen::Vector3f::UnitY());
+  Eigen::AngleAxisf init_rotation_z(ndt_pose_.yaw, Eigen::Vector3f::UnitZ());
   Eigen::Translation3f init_translation(
-    guess_pose_imu_odom_.x, guess_pose_imu_odom_.y, guess_pose_imu_odom_.z);
+    ndt_pose_.x, ndt_pose_.y, ndt_pose_.z);
   Eigen::Matrix4f init_guess =
     (init_translation * init_rotation_z * init_rotation_y * init_rotation_x).matrix() * tf_btol_;
 
   pcl::PointCloud<PointType>::Ptr output_cloud(new pcl::PointCloud<PointType>);
-
   ndt_.align(*output_cloud, init_guess);
   const double fitness_score = ndt_.getFitnessScore();
 
@@ -150,13 +149,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
 
   pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, t_localizer);
 
-  tf::Matrix3x3 mat_l, mat_b;
-  mat_l.setValue(
-    static_cast<double>(t_localizer(0, 0)), static_cast<double>(t_localizer(0, 1)),
-    static_cast<double>(t_localizer(0, 2)), static_cast<double>(t_localizer(1, 0)),
-    static_cast<double>(t_localizer(1, 1)), static_cast<double>(t_localizer(1, 2)),
-    static_cast<double>(t_localizer(2, 0)), static_cast<double>(t_localizer(2, 1)),
-    static_cast<double>(t_localizer(2, 2)));
+  tf::Matrix3x3 mat_b;
   mat_b.setValue(
     static_cast<double>(t_base_link(0, 0)), static_cast<double>(t_base_link(0, 1)),
     static_cast<double>(t_base_link(0, 2)), static_cast<double>(t_base_link(1, 0)),
@@ -168,15 +161,16 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   ndt_pose_.x = t_base_link(0, 3);
   ndt_pose_.y = t_base_link(1, 3);
   ndt_pose_.z = t_base_link(2, 3);
-  mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
+  mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw, 1);
 
   // base_link -> map
   // TODO implement tf2
-  transform_.setOrigin(tf::Vector3(ndt_pose_.x, ndt_pose_.y, ndt_pose_.z));
+  tf::Transform transform;
+  transform.setOrigin(tf::Vector3(ndt_pose_.x, ndt_pose_.y, ndt_pose_.z));
   tf::Quaternion quaternion;
   quaternion.setRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
-  transform_.setRotation(quaternion);
-  br_.sendTransform(tf::StampedTransform(transform_, current_scan_time_, "map", "base_link"));
+  transform.setRotation(quaternion);
+  br_.sendTransform(tf::StampedTransform(transform, points->header.stamp, "map", "base_link"));
 
   current_pose_imu_odom_ = ndt_pose_;
   previous_pose_ = ndt_pose_;
@@ -187,19 +181,16 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   init(offset_imu_odom_);
 
   // 指定距離移動してたら点群地図足し合わせ
-  const double shift = std::sqrt(
-    std::pow(ndt_pose_.x - added_pose_.x, 2.0) +
-    std::pow(ndt_pose_.y - added_pose_.y, 2.0));
+  const double shift = std::hypot(ndt_pose_.x - added_pose_.x, ndt_pose_.y - added_pose_.y);
   if (min_add_scan_shift_ <= shift) {
     map_ += *transformed_scan_ptr;
     added_pose_ = ndt_pose_;
     ndt_.setInputTarget(map_ptr);
+    // 点群地図を出力
+    sensor_msgs::PointCloud2 map_msg;
+    pcl::toROSMsg(*map_ptr, map_msg);
+    ndt_map_publisher_.publish(map_msg);
   }
-
-  // 点群地図を出力
-  sensor_msgs::PointCloud2 map_msg;
-  pcl::toROSMsg(*map_ptr, map_msg);
-  ndt_map_publisher_.publish(map_msg);
 
   // マッチングの確率を出力
   std_msgs::Float32 transform_probability;
@@ -207,17 +198,10 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   transform_probability_publisher_.publish(transform_probability);
 
   // 自己位置を出力
-  quaternion.setRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
   geometry_msgs::PoseStamped ndt_pose_msg;
   ndt_pose_msg.header.frame_id = "map";
   ndt_pose_msg.header.stamp = current_scan_time_;
-  ndt_pose_msg.pose.position.x = ndt_pose_.x;
-  ndt_pose_msg.pose.position.y = ndt_pose_.y;
-  ndt_pose_msg.pose.position.z = ndt_pose_.z;
-  ndt_pose_msg.pose.orientation.x = quaternion.x();
-  ndt_pose_msg.pose.orientation.y = quaternion.y();
-  ndt_pose_msg.pose.orientation.z = quaternion.z();
-  ndt_pose_msg.pose.orientation.w = quaternion.w();
+  ndt_pose_msg.pose = convertToGeometryPose(ndt_pose_);
 
   ndt_pose_publisher_.publish(ndt_pose_msg);
 

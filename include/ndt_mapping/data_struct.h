@@ -3,6 +3,9 @@
 
 #include <cmath>
 
+#include <geometry_msgs/Pose.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 struct Pose
 {
   double x;
