@@ -201,7 +201,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   geometry_msgs::PoseStamped ndt_pose_msg;
   ndt_pose_msg.header.frame_id = "map";
   ndt_pose_msg.header.stamp = current_scan_time_;
-  ndt_pose_msg.pose = convertToGeometryPose(ndt_pose_);
+  ndt_pose_msg.pose = ndt_mapping_utils::convertToGeometryPose(ndt_pose_);
 
   ndt_pose_publisher_.publish(ndt_pose_msg);
 
