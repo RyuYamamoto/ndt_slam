@@ -19,6 +19,15 @@ struct Pose
   : x(x), y(y), z(y), roll(roll), pitch(pitch), yaw(yaw)
   {
   }
+  void init()
+  {
+    x = 0.0;
+    y = 0.0;
+    z = 0.0;
+    roll = 0.0;
+    pitch = 0.0;
+    yaw = 0.0;
+  }
   Pose operator+(Pose input_pose)
   {
     Pose output_pose;

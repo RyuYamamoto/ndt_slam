@@ -35,9 +35,6 @@ NDTMapping::NDTMapping()
 
   map_.header.frame_id = "map";
 
-  init(ndt_pose_);
-  init(added_pose_);
-
   voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
 
   // create subscriber
@@ -49,47 +46,6 @@ NDTMapping::NDTMapping()
   ndt_map_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("ndt_map", 1000);
   ndt_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("ndt_pose", 1000);
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
-}
-
-void NDTMapping::init(Pose & pose)
-{
-  pose.x = 0.0;
-  pose.y = 0.0;
-  pose.z = 0.0;
-  pose.roll = 0.0;
-  pose.pitch = 0.0;
-  pose.yaw = 0.0;
-}
-
-// imuのroll方向の角速度と前進速度から得られる移動差分に対してpitchとyawの角速度で補正したものを足し合わせて推定位置を計算する
-void NDTMapping::calcImuAndOdometry(const ros::Time time)
-{
-  static ros::Time previous_time = time;  // TODO delete static
-  double diff_time = (time - previous_time).toSec();
-
-  // imuの角速度から回転差分を計算
-  current_pose_imu_odom_.roll += (imu_.angular_velocity.x * diff_time);
-  current_pose_imu_odom_.pitch += (imu_.angular_velocity.y * diff_time);
-  current_pose_imu_odom_.yaw += (imu_.angular_velocity.z * diff_time);
-
-  // 並進移動量
-  const double diff_distance = odom_.twist.twist.linear.x * diff_time;
-  // pitchとyawを考慮しオフセット計算
-  offset_imu_odom_.x =
-    diff_distance * std::cos(-current_pose_imu_odom_.pitch) * std::cos(current_pose_imu_odom_.yaw);
-  offset_imu_odom_.y =
-    diff_distance * std::cos(-current_pose_imu_odom_.pitch) * std::sin(current_pose_imu_odom_.yaw);
-  offset_imu_odom_.z = diff_distance * std::sin(-current_pose_imu_odom_.pitch);
-
-  // imuとodometryに基づく推測位置
-  guess_pose_imu_odom_.x = previous_pose_.x + offset_imu_odom_.x;
-  guess_pose_imu_odom_.y = previous_pose_.y + offset_imu_odom_.y;
-  guess_pose_imu_odom_.z = previous_pose_.z + offset_imu_odom_.z;
-  guess_pose_imu_odom_.roll = previous_pose_.roll + offset_imu_odom_.roll;
-  guess_pose_imu_odom_.pitch = previous_pose_.pitch + offset_imu_odom_.pitch;
-  guess_pose_imu_odom_.yaw = previous_pose_.yaw + offset_imu_odom_.yaw;
-
-  previous_time = time;
 }
 
 void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points)
@@ -104,7 +60,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
 
   // スキャンした点群をminとmaxの距離でカットする
   for (const auto p : tmp.points) {
-    const double dist = std::sqrt(p.x * p.x + p.y * p.y);
+    const double dist = std::hypot(p.x, p.y);
     if (min_scan_range_ < dist && dist < max_scan_range_) {
       scan_ptr->push_back(p);
     }
@@ -161,7 +117,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   ndt_pose_.x = t_base_link(0, 3);
   ndt_pose_.y = t_base_link(1, 3);
   ndt_pose_.z = t_base_link(2, 3);
-  mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw, 1);
+  mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
   // base_link -> map
   // TODO implement tf2
@@ -172,19 +128,13 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   transform.setRotation(quaternion);
   br_.sendTransform(tf::StampedTransform(transform, points->header.stamp, "map", "base_link"));
 
-  current_pose_imu_odom_ = ndt_pose_;
-  previous_pose_ = ndt_pose_;
-
   previous_scan_time_ = current_scan_time_;
 
-  // オフセットクリア
-  init(offset_imu_odom_);
-
   // 指定距離移動してたら点群地図足し合わせ
-  const double shift = std::hypot(ndt_pose_.x - added_pose_.x, ndt_pose_.y - added_pose_.y);
+  const double shift = std::hypot(ndt_pose_.x - previous_pose_.x, ndt_pose_.y - previous_pose_.y);
   if (min_add_scan_shift_ <= shift) {
     map_ += *transformed_scan_ptr;
-    added_pose_ = ndt_pose_;
+    previous_pose_ = ndt_pose_;
     ndt_.setInputTarget(map_ptr);
     // 点群地図を出力
     sensor_msgs::PointCloud2 map_msg;
