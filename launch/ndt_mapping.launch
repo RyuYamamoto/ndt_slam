@@ -1,5 +1,5 @@
 <launch>
-  <arg name="input_sensor_topic" default="/velodyne_points"/>
+  <arg name="input_sensor_topic" default="/points_raw"/>
   <arg name="input_odom_topic" default="odom"/>
   <arg name="input_imu_topic" default="/dvs/imu"/>
 
@@ -26,5 +26,5 @@
     <remap from="imu" to="$(arg input_imu_topic)"/>
   </node>
 
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ndt_mapping)/config/ndt_mapping.rviz"/>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ndt_mapping)/rviz/ndt_mapping.rviz"/>
 </launch>
