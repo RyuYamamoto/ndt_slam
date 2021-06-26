@@ -40,6 +40,7 @@ geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
   output_pose.orientation.x = quat.x();
   output_pose.orientation.y = quat.y();
   output_pose.orientation.z = quat.z();
+  return output_pose;
 }
 
 tf2::Transform convertToTransform(const Pose input_pose)
