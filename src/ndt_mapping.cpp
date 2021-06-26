@@ -119,7 +119,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   ndt_pose_.z = t_base_link(2, 3);
   mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
-  // base_link -> map
+  // publish tf
   ndt_mapping_utils::publishTF(br_, ndt_pose_, current_scan_time_, "map", "base_link");
 
   previous_scan_time_ = current_scan_time_;
