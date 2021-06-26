@@ -1,6 +1,9 @@
 #ifndef _NDT_MAPPING_UTILS_
 #define _NDT_MAPPING_UTILS_
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 #include <geometry_msgs/Pose.h>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -13,6 +16,18 @@
 
 namespace ndt_mapping_utils
 {
+template <typename PointType>
+void limitCloudScanData(
+  const typename pcl::PointCloud<PointType>::Ptr input_ptr,
+  const typename pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
+  const double max_scan_range)
+{
+  for (auto point : input_ptr->points) {
+    const double range = std::hypot(point.x, point.y);
+    if (min_scan_range < range && range < max_scan_range) { output_ptr->push_back(point); }
+  }
+}
+
 geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
 {
   geometry_msgs::Pose output_pose;

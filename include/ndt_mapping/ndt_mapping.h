@@ -85,7 +85,7 @@ private:
 
   void imuCorrect();
 
-  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points);
+  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
 };

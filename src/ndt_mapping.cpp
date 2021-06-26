@@ -48,39 +48,31 @@ NDTMapping::NDTMapping()
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
 }
 
-void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points)
+void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
 {
-  pcl::PointCloud<PointType> tmp;
-  pcl::PointCloud<PointType>::Ptr scan_ptr(new pcl::PointCloud<PointType>());
-  pcl::PointCloud<PointType>::Ptr filtered_scan_ptr(new pcl::PointCloud<PointType>());
-  pcl::PointCloud<PointType>::Ptr transformed_scan_ptr(new pcl::PointCloud<PointType>());
+  pcl::PointCloud<PointType>::Ptr points_ptr(new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr limit_points_ptr(new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr filtered_scan_ptr(new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr transformed_scan_ptr(new pcl::PointCloud<PointType>);
 
-  current_scan_time_ = points->header.stamp;
-  pcl::fromROSMsg(*points, tmp);
+  current_scan_time_ = input_points_ptr_msg->header.stamp;
+  pcl::fromROSMsg(*input_points_ptr_msg, *points_ptr);
 
-  // スキャンした点群をminとmaxの距離でカットする
-  for (const auto p : tmp.points) {
-    const double dist = std::hypot(p.x, p.y);
-    if (min_scan_range_ < dist && dist < max_scan_range_) { scan_ptr->push_back(p); }
-  }
+  ndt_mapping_utils::limitCloudScanData<PointType>(points_ptr, limit_points_ptr, min_scan_range_, max_scan_range_);
 
-  // 初回スキャン時
   if (initial_scan_loaded_) {
-    pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, tf_btol_);
+    pcl::transformPointCloud(*limit_points_ptr, *transformed_scan_ptr, tf_btol_);
     map_ += *transformed_scan_ptr;
     initial_scan_loaded_ = false;
   }
 
-  // 入力点群を間引く
-  voxel_grid_filter_.setInputCloud(scan_ptr);
+  voxel_grid_filter_.setInputCloud(limit_points_ptr);
   voxel_grid_filter_.filter(*filtered_scan_ptr);
 
-  // 入力点群設定
   ndt_.setInputSource(filtered_scan_ptr);
 
   pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
 
-  // 初回マップ作成タイミング
   if (is_first_map_) {
     ndt_.setInputTarget(map_ptr);
     is_first_map_ = false;
@@ -100,7 +92,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   Eigen::Matrix4f t_localizer = ndt_.getFinalTransformation();
   Eigen::Matrix4f t_base_link = t_localizer * tf_ltob_;
 
-  pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, t_localizer);
+  pcl::transformPointCloud(*limit_points_ptr, *transformed_scan_ptr, t_localizer);
 
   tf::Matrix3x3 mat_b;
   mat_b.setValue(
@@ -121,13 +113,13 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
 
   previous_scan_time_ = current_scan_time_;
 
-  // 指定距離移動してたら点群地図足し合わせ
   const double shift = std::hypot(ndt_pose_.x - previous_pose_.x, ndt_pose_.y - previous_pose_.y);
   if (min_add_scan_shift_ <= shift) {
     map_ += *transformed_scan_ptr;
     previous_pose_ = ndt_pose_;
     ndt_.setInputTarget(map_ptr);
-    // 点群地図を出力
+
+    // publish map cloud
     sensor_msgs::PointCloud2 map_msg;
     pcl::toROSMsg(*map_ptr, map_msg);
     ndt_map_publisher_.publish(map_msg);
@@ -147,8 +139,8 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   ndt_pose_publisher_.publish(ndt_pose_msg);
 
   std::cout << "-----------------------------------------------------------------" << std::endl;
-  std::cout << "Sequence number: " << points->header.seq << std::endl;
-  std::cout << "Number of scan points: " << scan_ptr->size() << " points." << std::endl;
+  std::cout << "Sequence number: " << input_points_ptr_msg->header.seq << std::endl;
+  std::cout << "Number of scan points: " << limit_points_ptr->size() << " points." << std::endl;
   std::cout << "Number of filtered scan points: " << filtered_scan_ptr->size() << " points."
             << std::endl;
   std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points."
