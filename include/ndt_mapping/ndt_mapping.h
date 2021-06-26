@@ -45,8 +45,8 @@ private:
   ros::Time current_scan_time_;
   ros::Time previous_scan_time_;
 
-  tf::TransformBroadcaster br_;
-  tf::Transform transform_;
+  //tf::TransformBroadcaster br_;
+  tf2_ros::TransformBroadcaster br_;
 
   pcl::PointCloud<PointType> map_;
   pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
@@ -81,6 +81,8 @@ private:
   Eigen::Matrix4f tf_btol_, tf_ltob_;  // base_link to sensor_link
 
   pcl::VoxelGrid<PointType> voxel_grid_filter_;
+
+  void imuCorrect();
 
   void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points);
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);

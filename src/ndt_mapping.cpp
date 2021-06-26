@@ -120,13 +120,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
   // base_link -> map
-  // TODO implement tf2
-  tf::Transform transform;
-  transform.setOrigin(tf::Vector3(ndt_pose_.x, ndt_pose_.y, ndt_pose_.z));
-  tf::Quaternion quaternion;
-  quaternion.setRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
-  transform.setRotation(quaternion);
-  br_.sendTransform(tf::StampedTransform(transform, points->header.stamp, "map", "base_link"));
+  ndt_mapping_utils::publishTF(br_, ndt_pose_, current_scan_time_, "map", "base_link");
 
   previous_scan_time_ = current_scan_time_;
 
