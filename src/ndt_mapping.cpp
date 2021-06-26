@@ -61,9 +61,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   // スキャンした点群をminとmaxの距離でカットする
   for (const auto p : tmp.points) {
     const double dist = std::hypot(p.x, p.y);
-    if (min_scan_range_ < dist && dist < max_scan_range_) {
-      scan_ptr->push_back(p);
-    }
+    if (min_scan_range_ < dist && dist < max_scan_range_) { scan_ptr->push_back(p); }
   }
 
   // 初回スキャン時
@@ -91,8 +89,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & point
   Eigen::AngleAxisf init_rotation_x(ndt_pose_.roll, Eigen::Vector3f::UnitX());
   Eigen::AngleAxisf init_rotation_y(ndt_pose_.pitch, Eigen::Vector3f::UnitY());
   Eigen::AngleAxisf init_rotation_z(ndt_pose_.yaw, Eigen::Vector3f::UnitZ());
-  Eigen::Translation3f init_translation(
-    ndt_pose_.x, ndt_pose_.y, ndt_pose_.z);
+  Eigen::Translation3f init_translation(ndt_pose_.x, ndt_pose_.y, ndt_pose_.z);
   Eigen::Matrix4f init_guess =
     (init_translation * init_rotation_z * init_rotation_y * init_rotation_x).matrix() * tf_btol_;
 

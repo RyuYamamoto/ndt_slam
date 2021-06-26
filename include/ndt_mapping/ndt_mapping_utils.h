@@ -3,12 +3,11 @@
 
 #include <geometry_msgs/Pose.h>
 
+#include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <ndt_mapping/data_struct.h>
 
@@ -39,16 +38,19 @@ tf2::Transform convertToTransform(const Pose input_pose)
   return transform;
 }
 
-void publishTF(tf2_ros::TransformBroadcaster broadcaster, const Pose pose, const ros::Time stamp, const std::string frame_id, const std::string child_frame_id)
+void publishTF(
+  tf2_ros::TransformBroadcaster broadcaster, const Pose pose, const ros::Time stamp,
+  const std::string frame_id, const std::string child_frame_id)
 {
   geometry_msgs::Transform transform;
   geometry_msgs::TransformStamped transform_stamped;
 
-  transform_stamped = tf2::toMsg(tf2::Stamped<tf2::Transform>(convertToTransform(pose), stamp, frame_id));
+  transform_stamped =
+    tf2::toMsg(tf2::Stamped<tf2::Transform>(convertToTransform(pose), stamp, frame_id));
   transform_stamped.child_frame_id = child_frame_id;
 
   broadcaster.sendTransform(transform_stamped);
 }
-}
+}  // namespace ndt_mapping_utils
 
 #endif

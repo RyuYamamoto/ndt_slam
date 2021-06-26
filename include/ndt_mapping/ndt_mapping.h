@@ -1,11 +1,11 @@
 #ifndef _NDT_MAPPING_
 #define _NDT_MAPPING_
 
-#include <ros/ros.h>
-#include <std_msgs/Float32.h>
 #include <nav_msgs/Odometry.h>
+#include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float32.h>
 
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -24,6 +24,7 @@
 class NDTMapping
 {
   using PointType = pcl::PointXYZI;
+
 public:
   NDTMapping();
   ~NDTMapping() = default;
