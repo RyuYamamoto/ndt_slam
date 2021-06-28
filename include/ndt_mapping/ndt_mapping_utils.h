@@ -71,9 +71,9 @@ void publishTF(
   broadcaster.sendTransform(transform_stamped);
 }
 
-void convertPoseToEigen() {}
+Eigen::VectorXd convertPoseToEigen(const Pose pose) {}
 
-void convertEigenToPose() {}
+Pose convertEigenToPose(const Eigen::VectorXd vec) {}
 
 }  // namespace ndt_mapping_utils
 
