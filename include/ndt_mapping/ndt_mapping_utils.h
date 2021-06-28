@@ -4,6 +4,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+
 #include <geometry_msgs/Pose.h>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -67,6 +70,11 @@ void publishTF(
 
   broadcaster.sendTransform(transform_stamped);
 }
+
+void convertPoseToEigen() {}
+
+void convertEigenToPose() {}
+
 }  // namespace ndt_mapping_utils
 
 #endif

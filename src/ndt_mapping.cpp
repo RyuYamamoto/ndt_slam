@@ -38,7 +38,7 @@ NDTMapping::NDTMapping()
   voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
 
   // create subscriber
-  points_subscriber_ = nh_.subscribe("points_raw", 1, &NDTMapping::pointsCallback, this);
+  points_subscriber_ = nh_.subscribe("points_raw", 1000, &NDTMapping::pointsCallback, this);
   odom_subscriber_ = nh_.subscribe("odom", 10, &NDTMapping::odomCallback, this);
   imu_subscriber_ = nh_.subscribe("imu", 10, &NDTMapping::imuCallback, this);
 
@@ -48,6 +48,16 @@ NDTMapping::NDTMapping()
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
 }
 
+void NDTMapping::imuCorrect(const ros::Time current_scan_time)
+{
+  const double dt = (current_scan_time - previous_scan_time_).toSec();
+
+  Pose diff_imu_pose(
+    0.0, 0.0, 0.0, imu_.angular_velocity.x * dt, imu_.angular_velocity.y * dt,
+    imu_.angular_velocity.z * dt);
+  imu_pose_ = imu_pose_ + diff_imu_pose;
+}
+
 void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
 {
   pcl::PointCloud<PointType>::Ptr points_ptr(new pcl::PointCloud<PointType>);
@@ -55,10 +65,11 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   pcl::PointCloud<PointType>::Ptr filtered_scan_ptr(new pcl::PointCloud<PointType>);
   pcl::PointCloud<PointType>::Ptr transformed_scan_ptr(new pcl::PointCloud<PointType>);
 
-  current_scan_time_ = input_points_ptr_msg->header.stamp;
+  const ros::Time current_scan_time = input_points_ptr_msg->header.stamp;
   pcl::fromROSMsg(*input_points_ptr_msg, *points_ptr);
 
-  ndt_mapping_utils::limitCloudScanData<PointType>(points_ptr, limit_points_ptr, min_scan_range_, max_scan_range_);
+  ndt_mapping_utils::limitCloudScanData<PointType>(
+    points_ptr, limit_points_ptr, min_scan_range_, max_scan_range_);
 
   if (initial_scan_loaded_) {
     pcl::transformPointCloud(*limit_points_ptr, *transformed_scan_ptr, tf_btol_);
@@ -68,7 +79,6 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
 
   voxel_grid_filter_.setInputCloud(limit_points_ptr);
   voxel_grid_filter_.filter(*filtered_scan_ptr);
-
   ndt_.setInputSource(filtered_scan_ptr);
 
   pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
@@ -109,9 +119,9 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
   // publish tf
-  ndt_mapping_utils::publishTF(br_, ndt_pose_, current_scan_time_, "map", "base_link");
+  ndt_mapping_utils::publishTF(br_, ndt_pose_, current_scan_time, "map", "base_link");
 
-  previous_scan_time_ = current_scan_time_;
+  previous_scan_time_ = current_scan_time;
 
   const double shift = std::hypot(ndt_pose_.x - previous_pose_.x, ndt_pose_.y - previous_pose_.y);
   if (min_add_scan_shift_ <= shift) {
@@ -133,7 +143,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   // 自己位置を出力
   geometry_msgs::PoseStamped ndt_pose_msg;
   ndt_pose_msg.header.frame_id = "map";
-  ndt_pose_msg.header.stamp = current_scan_time_;
+  ndt_pose_msg.header.stamp = current_scan_time;
   ndt_pose_msg.pose = ndt_mapping_utils::convertToGeometryPose(ndt_pose_);
 
   ndt_pose_publisher_.publish(ndt_pose_msg);

@@ -41,9 +41,10 @@ private:
   ros::Publisher transform_probability_publisher_;
 
   Pose ndt_pose_;
+  Pose imu_pose_;
+  Pose imu_offset_;
   Pose previous_pose_;
 
-  ros::Time current_scan_time_;
   ros::Time previous_scan_time_;
 
   //tf::TransformBroadcaster br_;
@@ -83,7 +84,7 @@ private:
 
   pcl::VoxelGrid<PointType> voxel_grid_filter_;
 
-  void imuCorrect();
+  void imuCorrect(const ros::Time current_scan_time);
 
   void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
