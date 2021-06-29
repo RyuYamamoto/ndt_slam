@@ -71,9 +71,18 @@ void publishTF(
   broadcaster.sendTransform(transform_stamped);
 }
 
-Eigen::VectorXd convertPoseToEigen(const Pose pose) {}
+Eigen::VectorXd convertPoseToEigen(const Pose pose)
+{
+  Eigen::VectorXd vec(6);
+  vec << pose.x, pose.y, pose.z, pose.roll, pose.pitch, pose.yaw;
+  return vec;
+}
 
-Pose convertEigenToPose(const Eigen::VectorXd vec) {}
+Pose convertEigenToPose(const Eigen::VectorXd vec)
+{
+  Pose pose(vec(0), vec(1), vec(2), vec(3), vec(4), vec(5));
+  return pose;
+}
 
 }  // namespace ndt_mapping_utils
 
