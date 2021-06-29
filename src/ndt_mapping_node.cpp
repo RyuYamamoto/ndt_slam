@@ -1,4 +1,4 @@
-#include "ndt_mapping/ndt_mapping.h"
+#include <ndt_mapping/ndt_mapping.h>
 
 int main(int argc, char**argv)
 {

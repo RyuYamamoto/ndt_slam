@@ -1,10 +1,11 @@
-#pragma 0
+#ifndef _NDT_MAPPING_
+#define _NDT_MAPPING_
 
-#include <ros/ros.h>
-#include <std_msgs/Float32.h>
 #include <nav_msgs/Odometry.h>
+#include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float32.h>
 
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -17,20 +18,13 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 
-struct EulerPose
-{
-  double x;
-  double y;
-  double z;
-  double roll;
-  double pitch;
-  double yaw;
-  EulerPose() : x(0.0), y(0.0), z(0.0), roll(0.0), pitch(0.0), yaw(0.0) {}
-};
+#include <ndt_mapping/data_struct.h>
 
 // odometry・IMU必須、通常実装のNDT使用
 class NDTMapping
 {
+  using PointType = pcl::PointXYZI;
+
 public:
   NDTMapping();
   ~NDTMapping() = default;
@@ -43,31 +37,24 @@ private:
   ros::Subscriber odom_subscriber_;
   ros::Subscriber imu_subscriber_;
   ros::Publisher ndt_map_publisher_;
-  ros::Publisher current_pose_publisher_;
+  ros::Publisher ndt_pose_publisher_;
   ros::Publisher transform_probability_publisher_;
 
-  EulerPose offset_imu_odom_;
-  // 点群地図を統合する際に移動量を計算するための初期位置用変数
-  EulerPose added_pose_;
-  // NDTに基づく自己位置
-  EulerPose ndt_pose_; // TODO 消す
-  EulerPose current_pose_;
-  // 一個前のスキャン時の自己位置
-  EulerPose previous_pose_;
-  EulerPose current_pose_imu_odom_;
-  EulerPose guess_pose_imu_odom_;
+  Pose ndt_pose_;
+  Pose imu_pose_;
+  Pose imu_offset_;
+  Pose previous_pose_;
 
-  ros::Time current_scan_time_;
   ros::Time previous_scan_time_;
 
-  tf::TransformBroadcaster br_;
-  tf::Transform transform_;
+  //tf::TransformBroadcaster br_;
+  tf2_ros::TransformBroadcaster br_;
 
-  pcl::PointCloud<pcl::PointXYZI> map_;
-  pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt_;
+  pcl::PointCloud<PointType> map_;
+  pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
 
-  bool initial_scan_loaded_;
-  bool is_first_map_;
+  bool initial_scan_loaded_{true};
+  bool is_first_map_{true};
 
   // rosparam
   double min_scan_range_;
@@ -95,10 +82,13 @@ private:
   double tf_yaw_;
   Eigen::Matrix4f tf_btol_, tf_ltob_;  // base_link to sensor_link
 
-  void init(EulerPose & pose);
-  void calcImuAndOdometry(const ros::Time time);
+  pcl::VoxelGrid<PointType> voxel_grid_filter_;
 
-  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & points);
+  void imuCorrect(const ros::Time current_scan_time);
+
+  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
 };
+
+#endif
