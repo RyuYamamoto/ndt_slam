@@ -1,7 +1,7 @@
-#include <ndt_mapping/ndt_mapping.h>
-#include <ndt_mapping/ndt_mapping_utils.h>
+#include <ndt_slam/ndt_slam.h>
+#include <ndt_slam/ndt_slam_utils.h>
 
-NDTMapping::NDTMapping()
+NDTSlam::NDTSlam()
 {
   pnh_.param<double>("tf_x", tf_x_, 0.0);
   pnh_.param<double>("tf_y", tf_y_, 0.0);
@@ -38,9 +38,9 @@ NDTMapping::NDTMapping()
   voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
 
   // create subscriber
-  points_subscriber_ = nh_.subscribe("points_raw", 1000, &NDTMapping::pointsCallback, this);
-  odom_subscriber_ = nh_.subscribe("odom", 10, &NDTMapping::odomCallback, this);
-  imu_subscriber_ = nh_.subscribe("imu", 10, &NDTMapping::imuCallback, this);
+  points_subscriber_ = nh_.subscribe("points_raw", 1000, &NDTSlam::pointsCallback, this);
+  odom_subscriber_ = nh_.subscribe("odom", 10, &NDTSlam::odomCallback, this);
+  imu_subscriber_ = nh_.subscribe("imu", 10, &NDTSlam::imuCallback, this);
 
   // create publisher
   ndt_map_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("ndt_map", 1000);
@@ -48,7 +48,7 @@ NDTMapping::NDTMapping()
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
 }
 
-void NDTMapping::imuCorrect(const ros::Time current_scan_time)
+void NDTSlam::imuCorrect(const ros::Time current_scan_time)
 {
   const double dt = (current_scan_time - previous_scan_time_).toSec();
 
@@ -58,7 +58,7 @@ void NDTMapping::imuCorrect(const ros::Time current_scan_time)
   imu_pose_ = imu_pose_ + diff_imu_pose;
 }
 
-void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
+void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
 {
   pcl::PointCloud<PointType>::Ptr points_ptr(new pcl::PointCloud<PointType>);
   pcl::PointCloud<PointType>::Ptr limit_points_ptr(new pcl::PointCloud<PointType>);
@@ -68,7 +68,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   const ros::Time current_scan_time = input_points_ptr_msg->header.stamp;
   pcl::fromROSMsg(*input_points_ptr_msg, *points_ptr);
 
-  ndt_mapping_utils::limitCloudScanData<PointType>(
+  ndt_slam_utils::limitCloudScanData<PointType>(
     points_ptr, limit_points_ptr, min_scan_range_, max_scan_range_);
 
   if (initial_scan_loaded_) {
@@ -119,7 +119,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   mat_b.getRPY(ndt_pose_.roll, ndt_pose_.pitch, ndt_pose_.yaw);
 
   // publish tf
-  ndt_mapping_utils::publishTF(br_, ndt_pose_, current_scan_time, "map", "base_link");
+  ndt_slam_utils::publishTF(br_, ndt_pose_, current_scan_time, "map", "base_link");
 
   previous_scan_time_ = current_scan_time;
 
@@ -144,7 +144,7 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   geometry_msgs::PoseStamped ndt_pose_msg;
   ndt_pose_msg.header.frame_id = "map";
   ndt_pose_msg.header.stamp = current_scan_time;
-  ndt_pose_msg.pose = ndt_mapping_utils::convertToGeometryPose(ndt_pose_);
+  ndt_pose_msg.pose = ndt_slam_utils::convertToGeometryPose(ndt_pose_);
 
   ndt_pose_publisher_.publish(ndt_pose_msg);
 
@@ -169,6 +169,6 @@ void NDTMapping::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input
   std::cout << "-----------------------------------------------------------------" << std::endl;
 }
 
-void NDTMapping::odomCallback(const nav_msgs::Odometry::ConstPtr & msg) { odom_ = *msg; }
+void NDTSlam::odomCallback(const nav_msgs::Odometry::ConstPtr & msg) { odom_ = *msg; }
 
-void NDTMapping::imuCallback(const sensor_msgs::Imu::ConstPtr & msg) { imu_ = *msg; }
+void NDTSlam::imuCallback(const sensor_msgs::Imu::ConstPtr & msg) { imu_ = *msg; }

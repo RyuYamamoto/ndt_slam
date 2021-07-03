@@ -18,16 +18,16 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 
-#include <ndt_mapping/data_struct.h>
+#include <ndt_slam/data_struct.h>
 
 // odometry・IMU必須、通常実装のNDT使用
-class NDTMapping
+class NDTSlam
 {
   using PointType = pcl::PointXYZI;
 
 public:
-  NDTMapping();
-  ~NDTMapping() = default;
+  NDTSlam();
+  ~NDTSlam() = default;
 
 private:
   ros::NodeHandle nh_{};

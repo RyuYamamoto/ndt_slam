@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ndt_mapping)
+project(ndt_slam)
 
 add_compile_options(-std=c++14)
 
@@ -21,5 +21,5 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(ndt_mapping_node src/ndt_mapping_node.cpp src/ndt_mapping.cpp)
-target_link_libraries(ndt_mapping_node ${catkin_LIBRARIES})
+add_executable(ndt_slam_node src/ndt_slam_node.cpp src/ndt_slam.cpp)
+target_link_libraries(ndt_slam_node ${catkin_LIBRARIES})
