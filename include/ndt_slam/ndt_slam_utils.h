@@ -1,5 +1,5 @@
-#ifndef _NDT_MAPPING_UTILS_
-#define _NDT_MAPPING_UTILS_
+#ifndef _NDT_SLAM_UTILS_
+#define _NDT_SLAM_UTILS_
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -15,9 +15,9 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <ndt_mapping/data_struct.h>
+#include <ndt_slam/data_struct.h>
 
-namespace ndt_mapping_utils
+namespace ndt_slam_utils
 {
 template <typename PointType>
 void limitCloudScanData(
@@ -84,6 +84,6 @@ Pose convertEigenToPose(const Eigen::VectorXd vec)
   return pose;
 }
 
-}  // namespace ndt_mapping_utils
+}  // namespace ndt_slam_utils
 
 #endif
