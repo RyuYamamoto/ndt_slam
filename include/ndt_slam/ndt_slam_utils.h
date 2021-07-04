@@ -19,18 +19,6 @@
 
 namespace ndt_slam_utils
 {
-template <typename PointType>
-void limitCloudScanData(
-  const typename pcl::PointCloud<PointType>::Ptr input_ptr,
-  const typename pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
-  const double max_scan_range)
-{
-  for (auto point : input_ptr->points) {
-    const double range = std::hypot(point.x, point.y);
-    if (min_scan_range < range && range < max_scan_range) { output_ptr->push_back(point); }
-  }
-}
-
 geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
 {
   geometry_msgs::Pose output_pose;
@@ -55,6 +43,23 @@ tf2::Transform convertToTransform(const Pose input_pose)
   transform.setRotation(quaternion);
 
   return transform;
+}
+
+Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
+{
+  Pose vec;
+
+  vec.x = pose(0, 3);
+  vec.y = pose(1, 3);
+  vec.z = pose(2, 3);
+
+  tf2::Matrix3x3 mat;
+  mat.setValue(
+    pose(0, 0), pose(0, 1), pose(0, 2), pose(1, 0), pose(1, 1), pose(1, 2), pose(2, 0), pose(2, 1),
+    pose(2, 2));
+  mat.getRPY(vec.roll, vec.pitch, vec.yaw);
+
+  return vec;
 }
 
 void publishTF(
