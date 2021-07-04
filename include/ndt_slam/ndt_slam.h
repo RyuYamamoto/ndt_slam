@@ -20,7 +20,7 @@
 
 #include <ndt_slam/data_struct.h>
 
-// odometry・IMU必須、通常実装のNDT使用
+
 class NDTSlam
 {
   using PointType = pcl::PointXYZI;
@@ -30,31 +30,47 @@ public:
   ~NDTSlam() = default;
 
 private:
+  void limitCloudScanData(
+    const pcl::PointCloud<PointType>::Ptr input_ptr,
+    const pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
+    const double max_scan_range);
+  void downsample(
+    const pcl::PointCloud<PointType>::Ptr input_ptr,
+    const pcl::PointCloud<PointType>::Ptr & output_ptr);
+
+  Pose getCurrentPose();
+
+  void imuCorrect(const ros::Time current_scan_time);
+
+  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
+  void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
+  void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
+
+private:
   ros::NodeHandle nh_{};
   ros::NodeHandle pnh_{"~"};
 
   ros::Subscriber points_subscriber_;
   ros::Subscriber odom_subscriber_;
   ros::Subscriber imu_subscriber_;
+  ros::Publisher ndt_aligned_cloud_publisher_;
   ros::Publisher ndt_map_publisher_;
   ros::Publisher ndt_pose_publisher_;
   ros::Publisher transform_probability_publisher_;
 
   Pose ndt_pose_;
-  Pose imu_pose_;
-  Pose imu_offset_;
   Pose previous_pose_;
+
+  Eigen::Matrix4f pose_{Eigen::Matrix4f::Identity()};
 
   ros::Time previous_scan_time_;
 
-  //tf::TransformBroadcaster br_;
   tf2_ros::TransformBroadcaster br_;
 
   pcl::PointCloud<PointType> map_;
   pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   bool initial_scan_loaded_{true};
-  bool is_first_map_{true};
 
   // rosparam
   double min_scan_range_;
@@ -73,22 +89,7 @@ private:
   sensor_msgs::Imu imu_;
   nav_msgs::Odometry odom_;
 
-  // rosparam
-  double tf_x_;
-  double tf_y_;
-  double tf_z_;
-  double tf_roll_;
-  double tf_pitch_;
-  double tf_yaw_;
-  Eigen::Matrix4f tf_btol_, tf_ltob_;  // base_link to sensor_link
-
   pcl::VoxelGrid<PointType> voxel_grid_filter_;
-
-  void imuCorrect(const ros::Time current_scan_time);
-
-  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
-  void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
-  void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
 };
 
 #endif
