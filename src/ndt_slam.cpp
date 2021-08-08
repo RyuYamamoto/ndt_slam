@@ -103,7 +103,6 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
     pcl::transformPointCloud(*limit_points_ptr, *transformed_scan_ptr, pose_);
     *map_ += *transformed_scan_ptr;
 
-    //pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
     ndt_.setInputTarget(map_);
 
     sensor_msgs::PointCloud2 map_msg;
