@@ -21,7 +21,6 @@
 #include <ndt_slam/SaveMap.h>
 #include <ndt_slam/data_struct.h>
 
-
 class NDTSlam
 {
   using PointType = pcl::PointXYZI;
@@ -47,7 +46,7 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
 
-  bool saveMapService(ndt_slam::SaveMapRequest &req, ndt_slam::SaveMapResponse &res);
+  bool saveMapService(ndt_slam::SaveMapRequest & req, ndt_slam::SaveMapResponse & res);
 
 private:
   ros::NodeHandle nh_{};

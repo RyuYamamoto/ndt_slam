@@ -134,11 +134,11 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   std::cout << "-----------------------------------------------------------------" << std::endl;
 }
 
-bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest &req, ndt_slam::SaveMapResponse &res)
+bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest & req, ndt_slam::SaveMapResponse & res)
 {
   pcl::PointCloud<PointType>::Ptr map_cloud(new pcl::PointCloud<PointType>);
 
-  if(req.resolution <= 0.0) {
+  if (req.resolution <= 0.0) {
     map_cloud = map_;
   } else {
     pcl::VoxelGrid<PointType> voxel_grid_filter;
