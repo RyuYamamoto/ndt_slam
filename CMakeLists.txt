@@ -11,6 +11,13 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
 )
 
+add_service_files(
+  FILES
+  SaveMap.srv
+)
+
+generate_messages(DEPENDENCIES std_msgs geometry_msgs)
+
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS geometry_msgs roscpp tf sensor_msgs pcl_ros

@@ -17,9 +17,8 @@ NDTSlam::NDTSlam()
   ndt_.setResolution(ndt_res_);
   ndt_.setMaximumIterations(max_iter_);
 
-  map_.header.frame_id = "map";
-
-  voxel_grid_filter_.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
+  map_.reset(new pcl::PointCloud<PointType>);
+  map_->header.frame_id = "map";
 
   // create subscriber
   points_subscriber_ = nh_.subscribe("points_raw", 1000, &NDTSlam::pointsCallback, this);
@@ -31,6 +30,9 @@ NDTSlam::NDTSlam()
   ndt_map_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("ndt_map", 1000);
   ndt_pose_publisher_ = nh_.advertise<geometry_msgs::PoseStamped>("ndt_pose", 1000);
   transform_probability_publisher_ = nh_.advertise<std_msgs::Float32>("transform_probability", 1);
+
+  // create service server
+  save_map_service_ = pnh_.advertiseService("save_map", &NDTSlam::saveMapService, this);
 }
 
 Pose NDTSlam::getCurrentPose() { return ndt_slam_utils::convertMatrixToPoseVec(pose_); }
@@ -50,8 +52,10 @@ void NDTSlam::downsample(
   const pcl::PointCloud<PointType>::Ptr input_ptr,
   const pcl::PointCloud<PointType>::Ptr & output_ptr)
 {
-  voxel_grid_filter_.setInputCloud(input_ptr);
-  voxel_grid_filter_.filter(*output_ptr);
+  pcl::VoxelGrid<PointType> voxel_grid_filter;
+  voxel_grid_filter.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
+  voxel_grid_filter.setInputCloud(input_ptr);
+  voxel_grid_filter.filter(*output_ptr);
 }
 
 void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
@@ -68,7 +72,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
 
   if (initial_scan_loaded_) {
     initial_scan_loaded_ = false;
-    map_ += *limit_points_ptr;  //transformed_scan_ptr;
+    *map_ += *limit_points_ptr;  //transformed_scan_ptr;
     ndt_.setInputTarget(limit_points_ptr);
   }
 
@@ -97,13 +101,13 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
     previous_pose_ = ndt_pose_;
 
     pcl::transformPointCloud(*limit_points_ptr, *transformed_scan_ptr, pose_);
-    map_ += *transformed_scan_ptr;
+    *map_ += *transformed_scan_ptr;
 
-    pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
-    ndt_.setInputTarget(map_ptr);
+    //pcl::PointCloud<PointType>::Ptr map_ptr(new pcl::PointCloud<PointType>(map_));
+    ndt_.setInputTarget(map_);
 
     sensor_msgs::PointCloud2 map_msg;
-    pcl::toROSMsg(*map_ptr, map_msg);
+    pcl::toROSMsg(*map_, map_msg);
     ndt_map_publisher_.publish(map_msg);
   }
 
@@ -129,6 +133,26 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   std::cout << "Number of iteration: " << final_iterations << std::endl;
   std::cout << "delta: " << delta << std::endl;
   std::cout << "-----------------------------------------------------------------" << std::endl;
+}
+
+bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest &req, ndt_slam::SaveMapResponse &res)
+{
+  pcl::PointCloud<PointType>::Ptr map_cloud(new pcl::PointCloud<PointType>);
+
+  if(req.resolution <= 0.0) {
+    map_cloud = map_;
+  } else {
+    pcl::VoxelGrid<PointType> voxel_grid_filter;
+    voxel_grid_filter.setLeafSize(req.resolution, req.resolution, req.resolution);
+    voxel_grid_filter.setInputCloud(map_);
+    voxel_grid_filter.filter(*map_cloud);
+  }
+
+  map_cloud->header.frame_id = "map";
+  int ret = pcl::io::savePCDFile(req.path, *map_cloud);
+  res.ret = (ret == 0);
+
+  return true;
 }
 
 void NDTSlam::odomCallback(const nav_msgs::Odometry::ConstPtr & msg) { odom_ = *msg; }

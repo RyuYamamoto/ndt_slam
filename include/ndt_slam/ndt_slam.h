@@ -18,6 +18,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 
+#include <ndt_slam/SaveMap.h>
 #include <ndt_slam/data_struct.h>
 
 
@@ -46,6 +47,8 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
 
+  bool saveMapService(ndt_slam::SaveMapRequest &req, ndt_slam::SaveMapResponse &res);
+
 private:
   ros::NodeHandle nh_{};
   ros::NodeHandle pnh_{"~"};
@@ -58,6 +61,8 @@ private:
   ros::Publisher ndt_pose_publisher_;
   ros::Publisher transform_probability_publisher_;
 
+  ros::ServiceServer save_map_service_;
+
   Pose ndt_pose_;
   Pose previous_pose_;
 
@@ -67,7 +72,7 @@ private:
 
   tf2_ros::TransformBroadcaster br_;
 
-  pcl::PointCloud<PointType> map_;
+  pcl::PointCloud<PointType>::Ptr map_;
   pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   bool initial_scan_loaded_{true};
@@ -88,8 +93,6 @@ private:
 
   sensor_msgs::Imu imu_;
   nav_msgs::Odometry odom_;
-
-  pcl::VoxelGrid<PointType> voxel_grid_filter_;
 };
 
 #endif
