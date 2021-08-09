@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   tf2
+  ndt_omp
 )
 
 add_service_files(

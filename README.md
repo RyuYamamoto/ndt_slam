@@ -12,4 +12,8 @@ open other terminal,
 rosbag play --clock <ROSBAG PATH>
 ```
 
+## Required packages
+- [ndt_omp](https://github.com/koide3/ndt_omp)
+
+## Video
 [![](https://img.youtube.com/vi/ncyMT3vk7H4/0.jpg)](https://www.youtube.com/watch?v=ncyMT3vk7H4)

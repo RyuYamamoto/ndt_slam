@@ -18,6 +18,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 
+#include <pclomp/ndt_omp.h>
+
 #include <ndt_slam/SaveMap.h>
 #include <ndt_slam/data_struct.h>
 
@@ -72,7 +74,8 @@ private:
   tf2_ros::TransformBroadcaster br_;
 
   pcl::PointCloud<PointType>::Ptr map_;
-  pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
+  //pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
+  pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   bool initial_scan_loaded_{true};
 
@@ -89,6 +92,7 @@ private:
   double step_size_;
   double ndt_res_;
   int max_iter_;
+  int omp_num_thread_;
 
   sensor_msgs::Imu imu_;
   nav_msgs::Odometry odom_;
