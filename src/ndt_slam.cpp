@@ -11,11 +11,14 @@ NDTSlam::NDTSlam()
   pnh_.param<double>("step_size", step_size_, 0.1);
   pnh_.param<double>("leaf_size", leaf_size_, 2.0);
   pnh_.param<int>("max_iter", max_iter_, 30);
+  pnh_.param<int>("omp_num_thread", omp_num_thread_, 0);
 
   ndt_.setTransformationEpsilon(trans_eps_);
   ndt_.setStepSize(step_size_);
   ndt_.setResolution(ndt_res_);
   ndt_.setMaximumIterations(max_iter_);
+  if (0 < omp_num_thread_) ndt_.setNumThreads(omp_num_thread_);
+  ndt_.setNeighborhoodSearchMethod(pclomp::KDTREE);
 
   map_.reset(new pcl::PointCloud<PointType>);
   map_->header.frame_id = "map";

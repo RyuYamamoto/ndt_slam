@@ -1,5 +1,5 @@
 <launch>
-  <arg name="input_sensor_topic" default="/points_raw"/>
+  <arg name="input_sensor_topic" default="/velodyne_points"/>
   <arg name="input_odom_topic" default="odom"/>
   <arg name="input_imu_topic" default="/dvs/imu"/>
 
@@ -10,6 +10,7 @@
   <arg name="trans_eps" default="0.01"/>
   <arg name="step_size" default="0.1"/>
   <arg name="max_iter" default="30"/>
+  <arg name="omp_num_thread" default="3"/>
 
   <node pkg="tf" type="static_transform_publisher" name="velodyne_transform_publisher" args="1.2 0 2.0 0 0 0 /base_link /velodyne 10" />
 
@@ -21,6 +22,7 @@
     <param name="trans_eps" value="$(arg trans_eps)"/>
     <param name="step_size" value="$(arg step_size)"/>
     <param name="max_iter" value="$(arg max_iter)"/>
+    <param name="omp_num_thread" value="$(arg omp_num_thread)"/>
     <remap from="points_raw" to="$(arg input_sensor_topic)"/>
     <remap from="odom" to="$(arg input_odom_topic)"/>
     <remap from="imu" to="$(arg input_imu_topic)"/>
