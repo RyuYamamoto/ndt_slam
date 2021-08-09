@@ -17,7 +17,7 @@ NDTSlam::NDTSlam()
   ndt_.setStepSize(step_size_);
   ndt_.setResolution(ndt_res_);
   ndt_.setMaximumIterations(max_iter_);
-  if(0 < omp_num_thread_) ndt_.setNumThreads(omp_num_thread_);
+  if (0 < omp_num_thread_) ndt_.setNumThreads(omp_num_thread_);
   ndt_.setNeighborhoodSearchMethod(pclomp::KDTREE);
 
   map_.reset(new pcl::PointCloud<PointType>);
