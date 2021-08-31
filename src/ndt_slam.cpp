@@ -3,6 +3,7 @@
 
 NDTSlam::NDTSlam()
 {
+  pnh_.param<std::string>("base_frame_id", base_frame_id_, "base_link");
   pnh_.param<double>("min_scan_range", min_scan_range_, 5.0);
   pnh_.param<double>("max_scan_range", max_scan_range_, 200.0);
   pnh_.param<double>("min_add_scan_shift", min_add_scan_shift_, 1.0);
@@ -95,7 +96,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
 
   // publish tf
   ndt_pose_ = getCurrentPose();  // convert matrix to vec
-  ndt_slam_utils::publishTF(br_, ndt_pose_, current_scan_time, "map", "base_link");
+  ndt_slam_utils::publishTF(br_, ndt_pose_, current_scan_time, "map", base_frame_id_);
 
   previous_scan_time_ = current_scan_time;
 

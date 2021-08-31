@@ -78,6 +78,7 @@ private:
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   bool initial_scan_loaded_{true};
+  std::string base_frame_id_;
 
   // rosparam
   double min_scan_range_;
