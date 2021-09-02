@@ -36,26 +36,23 @@ public:
 
 private:
   void limitCloudScanData(
-    const pcl::PointCloud<PointType>::Ptr input_ptr,
-    const pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
-    const double max_scan_range);
-  void downsample(
-    const pcl::PointCloud<PointType>::Ptr input_ptr,
-    const pcl::PointCloud<PointType>::Ptr & output_ptr);
+    const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr,
+    const double min_scan_range, const double max_scan_range);
+  void downsample(const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr);
 
   Pose getCurrentPose();
 
   void imuCorrect(const ros::Time current_scan_time);
 
-  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg);
-  void odomCallback(const nav_msgs::Odometry::ConstPtr & msg);
-  void imuCallback(const sensor_msgs::Imu::ConstPtr & msg);
+  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_points_ptr_msg);
+  void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+  void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
 
-  bool saveMapService(ndt_slam::SaveMapRequest & req, ndt_slam::SaveMapResponse & res);
+  bool saveMapService(ndt_slam::SaveMapRequest& req, ndt_slam::SaveMapResponse& res);
 
 private:
   ros::NodeHandle nh_{};
-  ros::NodeHandle pnh_{"~"};
+  ros::NodeHandle pnh_{ "~" };
 
   ros::Subscriber points_subscriber_;
   ros::Subscriber odom_subscriber_;
@@ -70,7 +67,7 @@ private:
   Pose ndt_pose_;
   Pose previous_pose_;
 
-  Eigen::Matrix4f pose_{Eigen::Matrix4f::Identity()};
+  Eigen::Matrix4f pose_{ Eigen::Matrix4f::Identity() };
 
   ros::Time previous_scan_time_;
 
@@ -83,7 +80,7 @@ private:
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformBroadcaster broadcaster_;
 
-  bool initial_scan_loaded_{true};
+  bool initial_scan_loaded_{ true };
   std::string base_frame_id_;
 
   // rosparam

@@ -18,7 +18,8 @@ NDTSlam::NDTSlam()
   ndt_.setStepSize(step_size_);
   ndt_.setResolution(ndt_res_);
   ndt_.setMaximumIterations(max_iter_);
-  if (0 < omp_num_thread_) ndt_.setNumThreads(omp_num_thread_);
+  if (0 < omp_num_thread_)
+    ndt_.setNumThreads(omp_num_thread_);
   ndt_.setNeighborhoodSearchMethod(pclomp::KDTREE);
 
   map_.reset(new pcl::PointCloud<PointType>);
@@ -39,22 +40,25 @@ NDTSlam::NDTSlam()
   save_map_service_ = pnh_.advertiseService("save_map", &NDTSlam::saveMapService, this);
 }
 
-Pose NDTSlam::getCurrentPose() { return ndt_slam_utils::convertMatrixToPoseVec(pose_); }
+Pose NDTSlam::getCurrentPose()
+{
+  return ndt_slam_utils::convertMatrixToPoseVec(pose_);
+}
 
 void NDTSlam::limitCloudScanData(
-  const pcl::PointCloud<PointType>::Ptr input_ptr,
-  const pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
-  const double max_scan_range)
+  const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr,
+  const double min_scan_range, const double max_scan_range)
 {
   for (auto point : input_ptr->points) {
     const double range = std::hypot(point.x, point.y);
-    if (min_scan_range < range && range < max_scan_range) { output_ptr->push_back(point); }
+    if (min_scan_range < range && range < max_scan_range) {
+      output_ptr->push_back(point);
+    }
   }
 }
 
 void NDTSlam::downsample(
-  const pcl::PointCloud<PointType>::Ptr input_ptr,
-  const pcl::PointCloud<PointType>::Ptr & output_ptr)
+  const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr)
 {
   pcl::VoxelGrid<PointType> voxel_grid_filter;
   voxel_grid_filter.setLeafSize(leaf_size_, leaf_size_, leaf_size_);
@@ -62,7 +66,7 @@ void NDTSlam::downsample(
   voxel_grid_filter.filter(*output_ptr);
 }
 
-void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_points_ptr_msg)
+void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_points_ptr_msg)
 {
   pcl::PointCloud<PointType>::Ptr points_ptr(new pcl::PointCloud<PointType>);
   pcl::PointCloud<PointType>::Ptr limit_points_ptr(new pcl::PointCloud<PointType>);
@@ -88,8 +92,8 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   geometry_msgs::TransformStamped sensor_frame_transform;
   try {
     sensor_frame_transform = tf_buffer_.lookupTransform(
-      base_frame_id_, input_points_ptr_msg->header.frame_id,  input_points_ptr_msg->header.stamp, ros::Duration(1.0));
-  } catch (tf2::TransformException & ex) {
+      base_frame_id_, input_points_ptr_msg->header.frame_id, input_points_ptr_msg->header.stamp, ros::Duration(1.0));
+  } catch (tf2::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
     sensor_frame_transform.header.stamp = current_scan_time;
     sensor_frame_transform.header.frame_id = base_frame_id_;
@@ -103,8 +107,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
     sensor_frame_transform.transform.rotation.z = 0.0;
   }
   const Eigen::Affine3d base_to_sensor_frame_affine = tf2::transformToEigen(sensor_frame_transform);
-  const Eigen::Matrix4f base_to_sensor_frame_matrix =
-    base_to_sensor_frame_affine.matrix().cast<float>();
+  const Eigen::Matrix4f base_to_sensor_frame_matrix = base_to_sensor_frame_affine.matrix().cast<float>();
   pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, base_to_sensor_frame_matrix);
   ndt_.setInputSource(transform_cloud_ptr);
 
@@ -115,7 +118,9 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   const double fitness_score = ndt_.getFitnessScore();
   const int final_iterations = ndt_.getFinalNumIteration();
 
-  if (!convergenced) { ROS_WARN("NDT has not Convergenced!"); }
+  if (!convergenced) {
+    ROS_WARN("NDT has not Convergenced!");
+  }
 
   pose_ = ndt_.getFinalTransformation();
 
@@ -163,7 +168,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   std::cout << "-----------------------------------------------------------------" << std::endl;
 }
 
-bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest & req, ndt_slam::SaveMapResponse & res)
+bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest& req, ndt_slam::SaveMapResponse& res)
 {
   pcl::PointCloud<PointType>::Ptr map_cloud(new pcl::PointCloud<PointType>);
 
@@ -183,6 +188,12 @@ bool NDTSlam::saveMapService(ndt_slam::SaveMapRequest & req, ndt_slam::SaveMapRe
   return true;
 }
 
-void NDTSlam::odomCallback(const nav_msgs::Odometry::ConstPtr & msg) { odom_ = *msg; }
+void NDTSlam::odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+  odom_ = *msg;
+}
 
-void NDTSlam::imuCallback(const sensor_msgs::Imu::ConstPtr & msg) { imu_ = *msg; }
+void NDTSlam::imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
+{
+  imu_ = *msg;
+}
