@@ -81,7 +81,32 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr & input_po
   }
 
   downsample(limit_points_ptr, filtered_scan_ptr);
-  ndt_.setInputSource(filtered_scan_ptr);
+
+  // transform base_link to sensor_link
+  pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
+  const std::string sensor_frame_id = input_points_ptr_msg->header.frame_id;
+  geometry_msgs::TransformStamped sensor_frame_transform;
+  try {
+    sensor_frame_transform = tf_buffer_.lookupTransform(
+      base_frame_id_, input_points_ptr_msg->header.frame_id,  input_points_ptr_msg->header.stamp, ros::Duration(1.0));
+  } catch (tf2::TransformException & ex) {
+    ROS_ERROR("%s", ex.what());
+    sensor_frame_transform.header.stamp = current_scan_time;
+    sensor_frame_transform.header.frame_id = base_frame_id_;
+    sensor_frame_transform.child_frame_id = sensor_frame_id;
+    sensor_frame_transform.transform.translation.x = 0.0;
+    sensor_frame_transform.transform.translation.y = 0.0;
+    sensor_frame_transform.transform.translation.z = 0.0;
+    sensor_frame_transform.transform.rotation.w = 1.0;
+    sensor_frame_transform.transform.rotation.x = 0.0;
+    sensor_frame_transform.transform.rotation.y = 0.0;
+    sensor_frame_transform.transform.rotation.z = 0.0;
+  }
+  const Eigen::Affine3d base_to_sensor_frame_affine = tf2::transformToEigen(sensor_frame_transform);
+  const Eigen::Matrix4f base_to_sensor_frame_matrix =
+    base_to_sensor_frame_affine.matrix().cast<float>();
+  pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, base_to_sensor_frame_matrix);
+  ndt_.setInputSource(transform_cloud_ptr);
 
   pcl::PointCloud<PointType>::Ptr output_cloud(new pcl::PointCloud<PointType>);
   ndt_.align(*output_cloud, pose_);

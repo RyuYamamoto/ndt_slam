@@ -23,6 +23,9 @@
 #include <ndt_slam/SaveMap.h>
 #include <ndt_slam/data_struct.h>
 
+#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
+
 class NDTSlam
 {
   using PointType = pcl::PointXYZI;
@@ -76,6 +79,9 @@ private:
   pcl::PointCloud<PointType>::Ptr map_;
   //pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformBroadcaster broadcaster_;
 
   bool initial_scan_loaded_{true};
   std::string base_frame_id_;
