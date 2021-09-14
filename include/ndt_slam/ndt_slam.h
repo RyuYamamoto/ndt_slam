@@ -48,6 +48,11 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
 
+  geometry_msgs::TransformStamped getTransform(const std::string target_frame, const std::string source_frame);
+  void transformPointCloud(
+    pcl::PointCloud<PointType>::Ptr input_ptr, pcl::PointCloud<PointType>::Ptr& output_ptr,
+    const std::string target_frame, const std::string source_frame);
+
   bool saveMapService(ndt_slam::SaveMapRequest& req, ndt_slam::SaveMapResponse& res);
 
 private:
@@ -71,13 +76,12 @@ private:
 
   ros::Time previous_scan_time_;
 
-  tf2_ros::TransformBroadcaster br_;
-
   pcl::PointCloud<PointType>::Ptr map_;
   //pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
   tf2_ros::TransformBroadcaster broadcaster_;
 
   bool initial_scan_loaded_{ true };
