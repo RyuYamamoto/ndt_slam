@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   tf2
+  tf2_sensor_msgs
   ndt_omp
 )
 

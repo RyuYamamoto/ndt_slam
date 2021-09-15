@@ -55,22 +55,20 @@ Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
 
   tf2::Matrix3x3 mat;
   mat.setValue(
-    pose(0, 0), pose(0, 1), pose(0, 2), pose(1, 0), pose(1, 1), pose(1, 2), pose(2, 0), pose(2, 1),
-    pose(2, 2));
+    pose(0, 0), pose(0, 1), pose(0, 2), pose(1, 0), pose(1, 1), pose(1, 2), pose(2, 0), pose(2, 1), pose(2, 2));
   mat.getRPY(vec.roll, vec.pitch, vec.yaw);
 
   return vec;
 }
 
 void publishTF(
-  tf2_ros::TransformBroadcaster broadcaster, const Pose pose, const ros::Time stamp,
-  const std::string frame_id, const std::string child_frame_id)
+  tf2_ros::TransformBroadcaster broadcaster, const Pose pose, const ros::Time stamp, const std::string frame_id,
+  const std::string child_frame_id)
 {
   geometry_msgs::Transform transform;
   geometry_msgs::TransformStamped transform_stamped;
 
-  transform_stamped =
-    tf2::toMsg(tf2::Stamped<tf2::Transform>(convertToTransform(pose), stamp, frame_id));
+  transform_stamped = tf2::toMsg(tf2::Stamped<tf2::Transform>(convertToTransform(pose), stamp, frame_id));
   transform_stamped.child_frame_id = child_frame_id;
 
   broadcaster.sendTransform(transform_stamped);
