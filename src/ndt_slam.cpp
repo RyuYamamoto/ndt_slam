@@ -106,16 +106,16 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   ndt_pose_ = getCurrentPose();  // convert matrix to vec
   ndt_slam_utils::publishTF(broadcaster_, ndt_pose_, current_scan_time, "map", base_frame_id_);
 
+  pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
+  pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, pose_);
+
   previous_scan_time_ = current_scan_time;
 
   const double delta = std::hypot(ndt_pose_.x - previous_pose_.x, ndt_pose_.y - previous_pose_.y);
   if (min_add_scan_shift_ <= delta) {
     previous_pose_ = ndt_pose_;
 
-    pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
-    pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, pose_);
-    *map_ += *transform_cloud_ptr;  //transformed_scan_ptr;
-
+    *map_ += *transform_cloud_ptr;
     ndt_.setInputTarget(map_);
 
     sensor_msgs::PointCloud2 map_msg;
