@@ -102,6 +102,9 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
 
   pose_ = ndt_.getFinalTransformation();
 
+  pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
+  pcl::transformPointCloud(*limit_points_ptr, *transform_cloud_ptr, pose_);
+
   // publish tf
   ndt_pose_ = getCurrentPose();  // convert matrix to vec
   ndt_slam_utils::publishTF(broadcaster_, ndt_pose_, current_scan_time, "map", base_frame_id_);
@@ -112,9 +115,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   if (min_add_scan_shift_ <= delta) {
     previous_pose_ = ndt_pose_;
 
-    pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
-    pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, pose_);
-    *map_ += *transform_cloud_ptr;  //transformed_scan_ptr;
+    *map_ += *transform_cloud_ptr;
 
     ndt_.setInputTarget(map_);
 
@@ -124,7 +125,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   }
 
   sensor_msgs::PointCloud2 aligned_cloud_msg;
-  pcl::toROSMsg(*output_cloud, aligned_cloud_msg);
+  pcl::toROSMsg(*transform_cloud_ptr, aligned_cloud_msg);
   aligned_cloud_msg.header.stamp = current_scan_time;
   aligned_cloud_msg.header.frame_id = sensor_frame_id;
   ndt_aligned_cloud_publisher_.publish(aligned_cloud_msg);
