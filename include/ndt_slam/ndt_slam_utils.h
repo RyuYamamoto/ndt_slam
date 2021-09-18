@@ -20,12 +20,13 @@
 
 namespace ndt_slam_utils
 {
-
 double diffRadian(const double radian_a, const double radian_b)
 {
   double diff_radian = radian_a - radian_b;
-  if(M_PI <= diff_radian) diff_radian -= 2 * M_PI;
-  else if(diff_radian < -M_PI) diff_radian += 2 * M_PI;
+  if (M_PI <= diff_radian)
+    diff_radian -= 2 * M_PI;
+  else if (diff_radian < -M_PI)
+    diff_radian += 2 * M_PI;
   return diff_radian;
 }
 
