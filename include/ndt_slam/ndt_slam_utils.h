@@ -8,6 +8,7 @@
 #include <Eigen/Geometry>
 
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
@@ -19,6 +20,15 @@
 
 namespace ndt_slam_utils
 {
+
+double diffRadian(const double radian_a, const double radian_b)
+{
+  double diff_radian = radian_a - radian_b;
+  if(M_PI <= diff_radian) diff_radian -= 2 * M_PI;
+  else if(diff_radian < -M_PI) diff_radian += 2 * M_PI;
+  return diff_radian;
+}
+
 geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
 {
   geometry_msgs::Pose output_pose;
@@ -43,6 +53,19 @@ tf2::Transform convertToTransform(const Pose input_pose)
   transform.setRotation(quaternion);
 
   return transform;
+}
+
+Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::Pose pose)
+{
+  Eigen::Affine3d affine;
+  tf2::fromMsg(pose, affine);
+  Eigen::Matrix4f matrix = affine.matrix().cast<float>();
+  return matrix;
+}
+
+Eigen::Matrix4f convertPoseVecToMatrix(const Pose pose)
+{
+  return convertGeometryPoseToMatrix(convertToGeometryPose(pose));
 }
 
 Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)

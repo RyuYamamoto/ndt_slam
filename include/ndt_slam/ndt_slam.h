@@ -48,6 +48,8 @@ private:
   void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
   void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
 
+  void imuCorrect(Eigen::Matrix4f &pose, const ros::Time stamp);
+
   geometry_msgs::TransformStamped getTransform(const std::string target_frame, const std::string source_frame);
   void transformPointCloud(
     pcl::PointCloud<PointType>::Ptr input_ptr, pcl::PointCloud<PointType>::Ptr& output_ptr,
@@ -74,17 +76,18 @@ private:
 
   Eigen::Matrix4f pose_{ Eigen::Matrix4f::Identity() };
 
+  Eigen::Vector3f imu_rotate_vec_;
+
   ros::Time previous_scan_time_;
 
   pcl::PointCloud<PointType>::Ptr map_;
-  //pcl::NormalDistributionsTransform<PointType, PointType> ndt_;
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   tf2_ros::TransformBroadcaster broadcaster_;
 
-  bool initial_scan_loaded_{ true };
+  bool use_imu_{false};
   std::string base_frame_id_;
 
   // rosparam

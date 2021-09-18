@@ -13,6 +13,7 @@ NDTSlam::NDTSlam() : tf_listener_(tf_buffer_)
   pnh_.param<double>("leaf_size", leaf_size_, 2.0);
   pnh_.param<int>("max_iter", max_iter_, 30);
   pnh_.param<int>("omp_num_thread", omp_num_thread_, 0);
+  pnh_.param<bool>("use_imu", use_imu_, false);
 
   ndt_.setTransformationEpsilon(trans_eps_);
   ndt_.setStepSize(step_size_);
@@ -21,9 +22,6 @@ NDTSlam::NDTSlam() : tf_listener_(tf_buffer_)
   if (0 < omp_num_thread_)
     ndt_.setNumThreads(omp_num_thread_);
   ndt_.setNeighborhoodSearchMethod(pclomp::KDTREE);
-
-  map_.reset(new pcl::PointCloud<PointType>);
-  map_->header.frame_id = "map";
 
   // create subscriber
   points_subscriber_ = nh_.subscribe("points_raw", 1000, &NDTSlam::pointsCallback, this);
@@ -38,6 +36,31 @@ NDTSlam::NDTSlam() : tf_listener_(tf_buffer_)
 
   // create service server
   save_map_service_ = pnh_.advertiseService("save_map", &NDTSlam::saveMapService, this);
+}
+
+void NDTSlam::imuCorrect(Eigen::Matrix4f& pose, const ros::Time stamp)
+{
+  static ros::Time prev_stamp = stamp;
+  static sensor_msgs::Imu prev_imu = imu_;
+  const double sampling_time = (stamp - prev_stamp).toSec();
+
+  Eigen::Vector3f diff_rot;
+  diff_rot.x() = (imu_.angular_velocity.x - prev_imu.angular_velocity.x) * sampling_time;
+  diff_rot.y() = (imu_.angular_velocity.y - prev_imu.angular_velocity.y) * sampling_time;
+  diff_rot.z() = (imu_.angular_velocity.z - prev_imu.angular_velocity.z) * sampling_time;
+
+  imu_rotate_vec_ += diff_rot;
+
+  Pose pose_vec = ndt_slam_utils::convertMatrixToPoseVec(pose);
+
+  pose_vec.roll += imu_rotate_vec_.x();
+  pose_vec.pitch += imu_rotate_vec_.y();
+  pose_vec.yaw += imu_rotate_vec_.z();
+
+  pose = ndt_slam_utils::convertPoseVecToMatrix(pose_vec);
+
+  prev_imu = imu_;
+  prev_stamp = stamp;
 }
 
 Pose NDTSlam::getCurrentPose()
@@ -78,16 +101,20 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
 
   limitCloudScanData(points_ptr, limit_points_ptr, min_scan_range_, max_scan_range_);
 
-  if (initial_scan_loaded_) {
-    initial_scan_loaded_ = false;
+  if (!map_) {
     pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
     transformPointCloud(limit_points_ptr, transform_cloud_ptr, base_frame_id_, sensor_frame_id);
+    map_.reset(new pcl::PointCloud<PointType>);
+    map_->header.frame_id = "map";
     *map_ += *transform_cloud_ptr;
     ndt_.setInputTarget(map_);
   }
 
   downsample(limit_points_ptr, filtered_scan_ptr);
   ndt_.setInputSource(filtered_scan_ptr);
+
+  if (use_imu_)
+    imuCorrect(pose_, current_scan_time);
 
   pcl::PointCloud<PointType>::Ptr output_cloud(new pcl::PointCloud<PointType>);
   ndt_.align(*output_cloud, pose_);
@@ -96,9 +123,8 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   const double fitness_score = ndt_.getFitnessScore();
   const int final_iterations = ndt_.getFinalNumIteration();
 
-  if (!convergenced) {
+  if (!convergenced)
     ROS_WARN("NDT has not Convergenced!");
-  }
 
   pose_ = ndt_.getFinalTransformation();
 
@@ -107,7 +133,7 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   ndt_slam_utils::publishTF(broadcaster_, ndt_pose_, current_scan_time, "map", base_frame_id_);
 
   pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
-  pcl::transformPointCloud(*filtered_scan_ptr, *transform_cloud_ptr, pose_);
+  pcl::transformPointCloud(*limit_points_ptr, *transform_cloud_ptr, pose_);
 
   previous_scan_time_ = current_scan_time;
 
@@ -137,7 +163,6 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   ndt_pose_msg.header.frame_id = "map";
   ndt_pose_msg.header.stamp = current_scan_time;
   ndt_pose_msg.pose = ndt_slam_utils::convertToGeometryPose(ndt_pose_);
-
   ndt_pose_publisher_.publish(ndt_pose_msg);
 
   std::cout << "-----------------------------------------------------------------" << std::endl;
