@@ -110,7 +110,9 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
     ndt_.setInputTarget(map_);
   }
 
-  downsample(limit_points_ptr, filtered_scan_ptr);
+  pcl::PointCloud<PointType>::Ptr sensor_transform_cloud(new pcl::PointCloud<PointType>);
+  transformPointCloud(limit_points_ptr, sensor_transform_cloud, base_frame_id_, sensor_frame_id);
+  downsample(sensor_transform_cloud, filtered_scan_ptr);
   ndt_.setInputSource(filtered_scan_ptr);
 
   if (use_imu_)
@@ -133,7 +135,9 @@ void NDTSlam::pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_poi
   ndt_slam_utils::publishTF(broadcaster_, ndt_pose_, current_scan_time, "map", base_frame_id_);
 
   pcl::PointCloud<PointType>::Ptr transform_cloud_ptr(new pcl::PointCloud<PointType>);
-  pcl::transformPointCloud(*limit_points_ptr, *transform_cloud_ptr, pose_);
+  pcl::transformPointCloud(
+    *limit_points_ptr, *transform_cloud_ptr,
+    pose_ * ndt_slam_utils::convertGeometryTransformToMatrix(getTransform(base_frame_id_, sensor_frame_id)));
 
   previous_scan_time_ = current_scan_time;
 
