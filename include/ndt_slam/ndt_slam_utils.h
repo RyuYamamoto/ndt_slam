@@ -8,6 +8,7 @@
 #include <Eigen/Geometry>
 
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
@@ -19,6 +20,16 @@
 
 namespace ndt_slam_utils
 {
+double diffRadian(const double radian_a, const double radian_b)
+{
+  double diff_radian = radian_a - radian_b;
+  if (M_PI <= diff_radian)
+    diff_radian -= 2 * M_PI;
+  else if (diff_radian < -M_PI)
+    diff_radian += 2 * M_PI;
+  return diff_radian;
+}
+
 geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
 {
   geometry_msgs::Pose output_pose;
@@ -45,6 +56,37 @@ tf2::Transform convertToTransform(const Pose input_pose)
   return transform;
 }
 
+geometry_msgs::Pose convertGeometryTransformToGeometryPose(const geometry_msgs::TransformStamped transform_stamped)
+{
+  geometry_msgs::Pose pose;
+  pose.position.x = transform_stamped.transform.translation.x;
+  pose.position.y = transform_stamped.transform.translation.y;
+  pose.position.z = transform_stamped.transform.translation.z;
+  pose.orientation.w = transform_stamped.transform.rotation.w;
+  pose.orientation.x = transform_stamped.transform.rotation.x;
+  pose.orientation.y = transform_stamped.transform.rotation.y;
+  pose.orientation.z = transform_stamped.transform.rotation.z;
+  return pose;
+}
+
+Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::Pose pose)
+{
+  Eigen::Affine3d affine;
+  tf2::fromMsg(pose, affine);
+  Eigen::Matrix4f matrix = affine.matrix().cast<float>();
+  return matrix;
+}
+
+Eigen::Matrix4f convertGeometryTransformToMatrix(const geometry_msgs::TransformStamped transform_stamped)
+{
+  return convertGeometryPoseToMatrix(convertGeometryTransformToGeometryPose(transform_stamped));
+}
+
+Eigen::Matrix4f convertPoseVecToMatrix(const Pose pose)
+{
+  return convertGeometryPoseToMatrix(convertToGeometryPose(pose));
+}
+
 Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
 {
   Pose vec;
@@ -59,6 +101,15 @@ Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
   mat.getRPY(vec.roll, vec.pitch, vec.yaw);
 
   return vec;
+}
+
+Pose convertQuaternionToPoseVec(const geometry_msgs::Quaternion quaternion)
+{
+  Pose pose;
+  tf2::Quaternion quat_tf2(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+  tf2::Matrix3x3 mat(quat_tf2);
+  mat.getRPY(pose.roll, pose.pitch, pose.yaw);
+  return pose;
 }
 
 void publishTF(
