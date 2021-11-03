@@ -7,8 +7,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
@@ -30,9 +30,9 @@ double diffRadian(const double radian_a, const double radian_b)
   return diff_radian;
 }
 
-geometry_msgs::Pose convertToGeometryPose(const Pose input_pose)
+geometry_msgs::msg::Pose convertToGeometryPose(const Pose input_pose)
 {
-  geometry_msgs::Pose output_pose;
+  geometry_msgs::msg::Pose output_pose;
   output_pose.position.x = input_pose.x;
   output_pose.position.y = input_pose.y;
   output_pose.position.z = input_pose.z;
@@ -56,9 +56,9 @@ tf2::Transform convertToTransform(const Pose input_pose)
   return transform;
 }
 
-geometry_msgs::Pose convertGeometryTransformToGeometryPose(const geometry_msgs::TransformStamped transform_stamped)
+geometry_msgs::msg::Pose convertGeometryTransformToGeometryPose(const geometry_msgs::msg::TransformStamped transform_stamped)
 {
-  geometry_msgs::Pose pose;
+  geometry_msgs::msg::Pose pose;
   pose.position.x = transform_stamped.transform.translation.x;
   pose.position.y = transform_stamped.transform.translation.y;
   pose.position.z = transform_stamped.transform.translation.z;
@@ -69,7 +69,7 @@ geometry_msgs::Pose convertGeometryTransformToGeometryPose(const geometry_msgs::
   return pose;
 }
 
-Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::Pose pose)
+Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::msg::Pose pose)
 {
   Eigen::Affine3d affine;
   tf2::fromMsg(pose, affine);
@@ -77,7 +77,7 @@ Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::Pose pose)
   return matrix;
 }
 
-Eigen::Matrix4f convertGeometryTransformToMatrix(const geometry_msgs::TransformStamped transform_stamped)
+Eigen::Matrix4f convertGeometryTransformToMatrix(const geometry_msgs::msg::TransformStamped transform_stamped)
 {
   return convertGeometryPoseToMatrix(convertGeometryTransformToGeometryPose(transform_stamped));
 }
@@ -103,7 +103,7 @@ Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
   return vec;
 }
 
-Pose convertQuaternionToPoseVec(const geometry_msgs::Quaternion quaternion)
+Pose convertQuaternionToPoseVec(const geometry_msgs::msg::Quaternion quaternion)
 {
   Pose pose;
   tf2::Quaternion quat_tf2(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
@@ -113,16 +113,20 @@ Pose convertQuaternionToPoseVec(const geometry_msgs::Quaternion quaternion)
 }
 
 void publishTF(
-  tf2_ros::TransformBroadcaster broadcaster, const Pose pose, const ros::Time stamp, const std::string frame_id,
+  std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster, const Pose pose, const rclcpp::Time stamp, const std::string frame_id,
   const std::string child_frame_id)
 {
-  geometry_msgs::Transform transform;
-  geometry_msgs::TransformStamped transform_stamped;
-
-  transform_stamped = tf2::toMsg(tf2::Stamped<tf2::Transform>(convertToTransform(pose), stamp, frame_id));
+  geometry_msgs::msg::Pose pose_msg = convertToGeometryPose(pose);
+  geometry_msgs::msg::TransformStamped transform_stamped;
+  transform_stamped.header.frame_id = frame_id;
   transform_stamped.child_frame_id = child_frame_id;
+  transform_stamped.header.stamp = stamp;
+  transform_stamped.transform.translation.x = pose_msg.position.x;
+  transform_stamped.transform.translation.y = pose_msg.position.y;
+  transform_stamped.transform.translation.z = pose_msg.position.z;
+  transform_stamped.transform.rotation = pose_msg.orientation;
 
-  broadcaster.sendTransform(transform_stamped);
+  broadcaster->sendTransform(transform_stamped);
 }
 
 Eigen::VectorXd convertPoseToEigen(const Pose pose)

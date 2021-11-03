@@ -2,11 +2,8 @@
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "ndt_slam_node");
-
-  NDTSlam ndt_slam;
-
-  ros::spin();
-
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<NDTSlam>());
+  rclcpp::shutdown();
   return 0;
 }

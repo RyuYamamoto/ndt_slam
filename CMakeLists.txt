@@ -1,34 +1,27 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(ndt_slam)
 
-add_compile_options(-std=c++14)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  sensor_msgs
-  pcl_ros
-  roscpp
-  tf2
-  tf2_sensor_msgs
-  ndt_omp
+find_package(ament_cmake_auto REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
+ament_auto_find_build_dependencies()
+
+ament_auto_add_executable(ndt_slam_node
+  src/ndt_slam_node.cpp
+  src/ndt_slam.cpp
 )
 
-add_service_files(
-  FILES
-  SaveMap.srv
-)
-
-generate_messages(DEPENDENCIES std_msgs geometry_msgs)
-
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS geometry_msgs roscpp tf sensor_msgs pcl_ros
-)
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
-
-add_executable(ndt_slam_node src/ndt_slam_node.cpp src/ndt_slam.cpp)
-target_link_libraries(ndt_slam_node ${catkin_LIBRARIES})
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+ament_auto_package(INSTALL_TO_SHARE launch config rviz)

@@ -1,14 +1,11 @@
 #ifndef _NDT_MAPPING_
 #define _NDT_MAPPING_
 
-#include <nav_msgs/Odometry.h>
-#include <ros/ros.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <std_msgs/Float32.h>
-
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_datatypes.h>
+#include <rclcpp/rclcpp.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_msgs/msg/float32.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/io.h>
@@ -16,17 +13,23 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/ndt.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/transforms.h>
+#include <pcl_ros/transforms.hpp>
 
 #include <pclomp/ndt_omp.h>
 
-#include <ndt_slam/SaveMap.h>
+#include <ndt_slam_srvs/srv/save_map.hpp>
 #include <ndt_slam/data_struct.h>
 
-#include <eigen_conversions/eigen_msg.h>
-#include <tf2_eigen/tf2_eigen.h>
+//#include <eigen_conversions/eigen_msg.h>
+#include "tf2/transform_datatypes.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2_sensor_msgs/tf2_sensor_msgs.h"
+#include "tf2_eigen/tf2_eigen.h"
 
-class NDTSlam
+class NDTSlam : public rclcpp::Node
 {
   using PointType = pcl::PointXYZI;
 
@@ -42,34 +45,32 @@ private:
 
   Pose getCurrentPose();
 
-  void imuCorrect(const ros::Time current_scan_time);
+  void pointsCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_points_ptr_msg);
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr& msg);
+  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr& msg);
 
-  void pointsCallback(const sensor_msgs::PointCloud2::ConstPtr& input_points_ptr_msg);
-  void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-  void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
+  void imuCorrect(const rclcpp::Time current_scan_time);
+  void imuCorrect(Eigen::Matrix4f& pose, const rclcpp::Time stamp);
 
-  void imuCorrect(Eigen::Matrix4f &pose, const ros::Time stamp);
-
-  geometry_msgs::TransformStamped getTransform(const std::string target_frame, const std::string source_frame);
+  geometry_msgs::msg::TransformStamped getTransform(const std::string target_frame, const std::string source_frame);
   void transformPointCloud(
     pcl::PointCloud<PointType>::Ptr input_ptr, pcl::PointCloud<PointType>::Ptr& output_ptr,
     const std::string target_frame, const std::string source_frame);
 
-  bool saveMapService(ndt_slam::SaveMapRequest& req, ndt_slam::SaveMapResponse& res);
+  bool
+  saveMapService(const ndt_slam_srvs::srv::SaveMap::Request::SharedPtr req, ndt_slam_srvs::srv::SaveMap::Response::SharedPtr res);
 
 private:
-  ros::NodeHandle nh_{};
-  ros::NodeHandle pnh_{ "~" };
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
 
-  ros::Subscriber points_subscriber_;
-  ros::Subscriber odom_subscriber_;
-  ros::Subscriber imu_subscriber_;
-  ros::Publisher ndt_aligned_cloud_publisher_;
-  ros::Publisher ndt_map_publisher_;
-  ros::Publisher ndt_pose_publisher_;
-  ros::Publisher transform_probability_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr ndt_aligned_cloud_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr ndt_map_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_pose_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr transform_probability_publisher_;
 
-  ros::ServiceServer save_map_service_;
+  rclcpp::Service<ndt_slam_srvs::srv::SaveMap>::SharedPtr save_map_service_;
 
   Pose ndt_pose_;
   Pose previous_pose_;
@@ -78,16 +79,16 @@ private:
 
   Eigen::Vector3f imu_rotate_vec_;
 
-  ros::Time previous_scan_time_;
+  rclcpp::Time previous_scan_time_;
 
   pcl::PointCloud<PointType>::Ptr map_;
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
-  tf2_ros::TransformBroadcaster broadcaster_;
+  tf2_ros::Buffer tf_buffer_{ get_clock() };
+  tf2_ros::TransformListener tf_listener_{ tf_buffer_ };
+  std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
-  bool use_imu_{false};
+  bool use_imu_{ false };
   std::string base_frame_id_;
 
   // rosparam
@@ -105,8 +106,8 @@ private:
   int max_iter_;
   int omp_num_thread_;
 
-  sensor_msgs::Imu imu_;
-  nav_msgs::Odometry odom_;
+  sensor_msgs::msg::Imu imu_;
+  nav_msgs::msg::Odometry odom_;
 };
 
 #endif

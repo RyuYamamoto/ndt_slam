@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/msg/pose.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 
 struct Pose
@@ -18,7 +18,7 @@ struct Pose
   {
   }
   Pose(double x, double y, double z, double roll, double pitch, double yaw)
-  : x(x), y(y), z(y), roll(roll), pitch(pitch), yaw(yaw)
+  : x(x), y(y), z(z), roll(roll), pitch(pitch), yaw(yaw)
   {
   }
   void init()

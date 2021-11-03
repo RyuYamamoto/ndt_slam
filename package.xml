@@ -1,33 +1,22 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>ndt_slam</name>
   <version>0.0.0</version>
   <description>The ndt_slam package</description>
-
   <maintainer email="rottertarmenation.y11.r18@gmail.com">RyuYamamoto</maintainer>
+  <license>MIT</license>
 
-  <license>TODO</license>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>rclcpp</depend>
+  <depend>tf2</depend>
+  <depend>tf</depend>
+  <depend>ndt_omp</depend>
+  <depend>ndt_slam_srvs</depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>geometry_msgs</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>pcl_ros</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>tf2</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>ndt_omp</build_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>pcl_ros</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>tf2</exec_depend>
-  <exec_depend>tf</exec_depend>
-  <exec_depend>ndt_omp</exec_depend>
-
-
-  <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
