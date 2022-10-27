@@ -1,22 +1,27 @@
 #ifndef _NDT_SLAM_UTILS_
 #define _NDT_SLAM_UTILS_
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
+#include <ndt_slam/data_struct.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <ndt_slam/data_struct.h>
+#ifdef USE_TF2_GEOMETRY_MSGS_DEPRECATED_HEADER
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
 
 namespace ndt_slam_utils
 {
@@ -56,7 +61,8 @@ tf2::Transform convertToTransform(const Pose input_pose)
   return transform;
 }
 
-geometry_msgs::msg::Pose convertGeometryTransformToGeometryPose(const geometry_msgs::msg::TransformStamped transform_stamped)
+geometry_msgs::msg::Pose convertGeometryTransformToGeometryPose(
+  const geometry_msgs::msg::TransformStamped transform_stamped)
 {
   geometry_msgs::msg::Pose pose;
   pose.position.x = transform_stamped.transform.translation.x;
@@ -77,7 +83,8 @@ Eigen::Matrix4f convertGeometryPoseToMatrix(const geometry_msgs::msg::Pose pose)
   return matrix;
 }
 
-Eigen::Matrix4f convertGeometryTransformToMatrix(const geometry_msgs::msg::TransformStamped transform_stamped)
+Eigen::Matrix4f convertGeometryTransformToMatrix(
+  const geometry_msgs::msg::TransformStamped transform_stamped)
 {
   return convertGeometryPoseToMatrix(convertGeometryTransformToGeometryPose(transform_stamped));
 }
@@ -97,7 +104,8 @@ Pose convertMatrixToPoseVec(const Eigen::Matrix4f pose)
 
   tf2::Matrix3x3 mat;
   mat.setValue(
-    pose(0, 0), pose(0, 1), pose(0, 2), pose(1, 0), pose(1, 1), pose(1, 2), pose(2, 0), pose(2, 1), pose(2, 2));
+    pose(0, 0), pose(0, 1), pose(0, 2), pose(1, 0), pose(1, 1), pose(1, 2), pose(2, 0), pose(2, 1),
+    pose(2, 2));
   mat.getRPY(vec.roll, vec.pitch, vec.yaw);
 
   return vec;
@@ -113,8 +121,8 @@ Pose convertQuaternionToPoseVec(const geometry_msgs::msg::Quaternion quaternion)
 }
 
 void publishTF(
-  std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster, const Pose pose, const rclcpp::Time stamp, const std::string frame_id,
-  const std::string child_frame_id)
+  std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster, const Pose pose,
+  const rclcpp::Time stamp, const std::string frame_id, const std::string child_frame_id)
 {
   geometry_msgs::msg::Pose pose_msg = convertToGeometryPose(pose);
   geometry_msgs::msg::TransformStamped transform_stamped;

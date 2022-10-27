@@ -1,33 +1,39 @@
 #ifndef _NDT_MAPPING_
 #define _NDT_MAPPING_
 
+#include <ndt_slam_srvs/srv/save_map.hpp>
+#include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
+
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/float32.hpp>
 
+#include <ndt_slam/data_struct.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/ndt.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/transforms.hpp>
-
 #include <pclomp/ndt_omp.h>
-
-#include <ndt_slam_srvs/srv/save_map.hpp>
-#include <ndt_slam/data_struct.h>
 
 //#include <eigen_conversions/eigen_msg.h>
 #include "tf2/transform_datatypes.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
-#include "tf2_sensor_msgs/tf2_sensor_msgs.h"
-#include "tf2_eigen/tf2_eigen.h"
+
+#ifdef USE_TF2_GEOMETRY_MSGS_DEPRECATED_HEADER
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#else
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
+#endif
 
 class NDTSlam : public rclcpp::Node
 {
@@ -39,26 +45,31 @@ public:
 
 private:
   void limitCloudScanData(
-    const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr,
-    const double min_scan_range, const double max_scan_range);
-  void downsample(const pcl::PointCloud<PointType>::Ptr input_ptr, const pcl::PointCloud<PointType>::Ptr& output_ptr);
+    const pcl::PointCloud<PointType>::Ptr input_ptr,
+    const pcl::PointCloud<PointType>::Ptr & output_ptr, const double min_scan_range,
+    const double max_scan_range);
+  void downsample(
+    const pcl::PointCloud<PointType>::Ptr input_ptr,
+    const pcl::PointCloud<PointType>::Ptr & output_ptr);
 
   Pose getCurrentPose();
 
   void pointsCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_points_ptr_msg);
-  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr& msg);
-  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr& msg);
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr & msg);
+  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr & msg);
 
   void imuCorrect(const rclcpp::Time current_scan_time);
-  void imuCorrect(Eigen::Matrix4f& pose, const rclcpp::Time stamp);
+  void imuCorrect(Eigen::Matrix4f & pose, const rclcpp::Time stamp);
 
-  geometry_msgs::msg::TransformStamped getTransform(const std::string target_frame, const std::string source_frame);
+  geometry_msgs::msg::TransformStamped getTransform(
+    const std::string target_frame, const std::string source_frame);
   void transformPointCloud(
-    pcl::PointCloud<PointType>::Ptr input_ptr, pcl::PointCloud<PointType>::Ptr& output_ptr,
+    pcl::PointCloud<PointType>::Ptr input_ptr, pcl::PointCloud<PointType>::Ptr & output_ptr,
     const std::string target_frame, const std::string source_frame);
 
-  bool
-  saveMapService(const ndt_slam_srvs::srv::SaveMap::Request::SharedPtr req, ndt_slam_srvs::srv::SaveMap::Response::SharedPtr res);
+  bool saveMapService(
+    const ndt_slam_srvs::srv::SaveMap::Request::SharedPtr req,
+    ndt_slam_srvs::srv::SaveMap::Response::SharedPtr res);
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_subscriber_;
@@ -75,7 +86,7 @@ private:
   Pose ndt_pose_;
   Pose previous_pose_;
 
-  Eigen::Matrix4f pose_{ Eigen::Matrix4f::Identity() };
+  Eigen::Matrix4f pose_{Eigen::Matrix4f::Identity()};
 
   Eigen::Vector3f imu_rotate_vec_;
 
@@ -84,11 +95,11 @@ private:
   pcl::PointCloud<PointType>::Ptr map_;
   pclomp::NormalDistributionsTransform<PointType, PointType> ndt_;
 
-  tf2_ros::Buffer tf_buffer_{ get_clock() };
-  tf2_ros::TransformListener tf_listener_{ tf_buffer_ };
+  tf2_ros::Buffer tf_buffer_{get_clock()};
+  tf2_ros::TransformListener tf_listener_{tf_buffer_};
   std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
 
-  bool use_imu_{ false };
+  bool use_imu_{false};
   std::string base_frame_id_;
 
   // rosparam
