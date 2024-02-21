@@ -1,4 +1,4 @@
-#include <ndt_slam/ndt_slam.h>
+#include <ndt_slam/ndt_slam.hpp>
 
 int main(int argc, char ** argv)
 {

@@ -8,6 +8,8 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>pcl_ros</depend>
@@ -17,7 +19,9 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf</depend>
   <depend>ndt_omp</depend>
-  <depend>ndt_slam_srvs</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

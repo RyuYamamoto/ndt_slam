@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    base_frame_id: "base_link"
+
+    min_scan_range: 5.0
+
+    max_scan_range: 200.0
+
+    min_add_scan_shift: 1.0
+
+    ndt_res: 5.0
+
+    trans_eps: 0.01
+
+    step_size: 0.1
+
+    max_iter: 30
+
+    omp_num_thread: 4
+
+    leaf_size: 2.0
+
+    map_leaf_size: 0.2
+
+    use_imu: false
+
+    use_debug: false
