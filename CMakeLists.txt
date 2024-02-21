@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(ndt_slam)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
@@ -15,16 +15,10 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 ament_auto_find_build_dependencies()
 
-ament_auto_add_executable(ndt_slam_node
+ament_auto_add_executable(${PROJECT_NAME}_node
   src/ndt_slam_node.cpp
   src/ndt_slam.cpp
 )
-
-if(${tf2_geometry_msgs_VERSION} VERSION_LESS 0.18.0)
-  target_compile_definitions(ndt_slam_node PUBLIC
-    USE_TF2_GEOMETRY_MSGS_DEPRECATED_HEADER
-  )
-endif()
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
